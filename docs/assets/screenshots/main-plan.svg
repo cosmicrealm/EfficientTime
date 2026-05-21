@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="760" viewBox="0 0 1200 760" role="img" aria-label="EfficientTime plan screen preview">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#eefafa"/>
+      <stop offset="100%" stop-color="#e8f6ef"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#7da6a1" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+  <rect width="1200" height="760" rx="28" fill="url(#bg)"/>
+  <rect x="38" y="34" width="1124" height="692" rx="22" fill="#f9ffff" filter="url(#shadow)"/>
+  <rect x="38" y="34" width="1124" height="50" rx="22" fill="#e5f4f3"/>
+  <circle cx="70" cy="59" r="8" fill="#ff5f57"/>
+  <circle cx="96" cy="59" r="8" fill="#ffbd2e"/>
+  <circle cx="122" cy="59" r="8" fill="#28c840"/>
+  <text x="158" y="66" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="700" fill="#203233">EfficientTime</text>
+
+  <rect x="64" y="112" width="300" height="576" rx="18" fill="#eef8f5"/>
+  <text x="88" y="150" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="20" font-weight="700" fill="#1f2d2f">快速添加</text>
+  <rect x="88" y="174" width="252" height="38" rx="9" fill="#ffffff" stroke="#c8dedc"/>
+  <text x="104" y="198" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" fill="#708080">任务名称</text>
+  <rect x="88" y="226" width="116" height="36" rx="9" fill="#ffffff" stroke="#c8dedc"/>
+  <text x="104" y="249" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" fill="#708080">开始</text>
+  <rect x="224" y="226" width="116" height="36" rx="9" fill="#ffffff" stroke="#c8dedc"/>
+  <text x="240" y="249" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" fill="#708080">结束</text>
+  <rect x="88" y="280" width="252" height="42" rx="12" fill="#0f8ea0"/>
+  <text x="181" y="307" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="700" fill="#ffffff">添加</text>
+
+  <text x="88" y="366" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="18" font-weight="700" fill="#1f2d2f">选择日期</text>
+  <rect x="88" y="386" width="252" height="190" rx="14" fill="#ffffff" stroke="#d2e5e0"/>
+  <text x="164" y="414" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" font-weight="700" fill="#244345">2026 年 5 月</text>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="11" fill="#8b9998">
+    <text x="108" y="446">日</text><text x="142" y="446">一</text><text x="176" y="446">二</text><text x="210" y="446">三</text><text x="244" y="446">四</text><text x="278" y="446">五</text><text x="312" y="446">六</text>
+  </g>
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="12" text-anchor="middle">
+    <circle cx="246" cy="498" r="15" fill="#0f8ea0"/><text x="246" y="503" fill="#fff" font-weight="700">21</text>
+    <text x="110" y="477" fill="#344">17</text><text x="144" y="477" fill="#344">18</text><text x="178" y="477" fill="#344">19</text><text x="212" y="477" fill="#344">20</text>
+    <text x="280" y="503" fill="#344">22</text><text x="314" y="503" fill="#344">23</text>
+  </g>
+
+  <text x="396" y="148" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="28" font-weight="800" fill="#202b2d">今天时间表</text>
+  <text x="396" y="178" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="15" fill="#768485">完成 1/5 · 草稿</text>
+  <rect x="392" y="214" width="520" height="78" rx="16" fill="#dff3ff" stroke="#1289a7" stroke-width="2"/>
+  <text x="424" y="248" font-family="SFMono-Regular,Menlo,monospace" font-size="22" fill="#1f2d2f">09:30</text>
+  <text x="424" y="274" font-family="SFMono-Regular,Menlo,monospace" font-size="18" fill="#6e7e80">09:50</text>
+  <rect x="512" y="234" width="5" height="42" rx="2" fill="#1397ff"/>
+  <text x="544" y="250" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="21" font-weight="800" fill="#1f2d2f">查看投资账户</text>
+  <text x="544" y="276" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" fill="#6c797a">20 分钟</text>
+
+  <g font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif">
+    <rect x="392" y="314" width="520" height="70" rx="14" fill="#ecf7fb"/>
+    <text x="424" y="346" font-family="SFMono-Regular,Menlo,monospace" font-size="20" fill="#1f2d2f">10:00</text>
+    <rect x="512" y="331" width="5" height="36" rx="2" fill="#59b6ff"/>
+    <text x="544" y="346" font-size="19" font-weight="700" fill="#1f2d2f">阅读论文综述</text>
+    <text x="544" y="370" font-size="13" fill="#708080">60 分钟</text>
+    <rect x="392" y="400" width="520" height="70" rx="14" fill="#ecf7fb"/>
+    <text x="424" y="432" font-family="SFMono-Regular,Menlo,monospace" font-size="20" fill="#1f2d2f">11:10</text>
+    <rect x="512" y="417" width="5" height="36" rx="2" fill="#59b6ff"/>
+    <text x="544" y="432" font-size="19" font-weight="700" fill="#1f2d2f">实现核心功能</text>
+    <text x="544" y="456" font-size="13" fill="#708080">90 分钟</text>
+  </g>
+
+  <rect x="944" y="112" width="178" height="576" rx="18" fill="#eef8f5"/>
+  <text x="970" y="150" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="20" font-weight="700" fill="#1f2d2f">时间块</text>
+  <text x="970" y="204" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="17" font-weight="700" fill="#1f2d2f">查看投资账户</text>
+  <text x="970" y="238" font-family="SFMono-Regular,Menlo,monospace" font-size="18" fill="#708080">09:30-09:50</text>
+  <rect x="970" y="292" width="112" height="36" rx="10" fill="#dceff0"/>
+  <text x="1006" y="315" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="700" fill="#0f8191">完成</text>
+  <rect x="970" y="342" width="112" height="36" rx="10" fill="#dceff0"/>
+  <text x="1006" y="365" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif" font-size="14" font-weight="700" fill="#0f8191">跳过</text>
+</svg>

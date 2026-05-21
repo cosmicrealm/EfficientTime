@@ -1,0 +1,11 @@
+.DS_Store
+.build/
+.swiftpm/
+DerivedData/
+dist/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcuserdata/
+*.xcuserstate
+.env
+.env.local
+local-secrets.json
