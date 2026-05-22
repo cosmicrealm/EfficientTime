@@ -13,7 +13,7 @@ struct BlockDetailView: View {
                 DayStatusRingView(blocks: model.visiblePlanBlocks, accentColor: model.settings.accentColor)
                     .padding(.top)
 
-                Text("时间块")
+                Text(model.tr("时间块"))
                     .font(.headline)
 
                 statusOverview
@@ -31,15 +31,15 @@ struct BlockDetailView: View {
                             .font(.system(.body, design: .monospaced))
                             .foregroundStyle(.secondary)
 
-                        Text("\(block.durationMinutes) 分钟")
+                        Text(model.minutesText(block.durationMinutes))
                             .foregroundStyle(.secondary)
 
                         Divider()
 
                         HStack {
-                            Text("状态")
+                            Text(model.tr("状态"))
                             Spacer()
-                            Text(block.status.title)
+                            Text(model.statusTitle(block.status))
                                 .font(.caption)
                                 .padding(.horizontal, 8)
                                 .padding(.vertical, 3)
@@ -50,11 +50,11 @@ struct BlockDetailView: View {
 
                         Grid(alignment: .leading, horizontalSpacing: 8, verticalSpacing: 8) {
                             GridRow {
-                                Text("开始")
+                                Text(model.tr("开始"))
                                 TextField("09:00", text: $startText)
                             }
                             GridRow {
-                                Text("结束")
+                                Text(model.tr("结束"))
                                 TextField("10:00", text: $endText)
                             }
                         }
@@ -63,7 +63,7 @@ struct BlockDetailView: View {
                         Button {
                             _ = model.updateSelectedBlock(startText: startText, endText: endText)
                         } label: {
-                            Label("更新时间", systemImage: "calendar.badge.clock")
+                            Label(model.tr("更新时间"), systemImage: "calendar.badge.clock")
                         }
                         .disabled(block.status == .deleted)
 
@@ -78,21 +78,21 @@ struct BlockDetailView: View {
                                 model.markSelectedDone()
                             }
                         } label: {
-                            Label(block.status == .done ? "取消完成" : "完成", systemImage: block.status == .done ? "arrow.uturn.backward.circle" : "checkmark.circle")
+                            Label(block.status == .done ? model.tr("取消完成") : model.tr("完成"), systemImage: block.status == .done ? "arrow.uturn.backward.circle" : "checkmark.circle")
                         }
                         .disabled(block.status == .deleted)
 
                         Button {
                             model.skipSelected()
                         } label: {
-                            Label(block.status == .skipped ? "取消跳过" : "跳过", systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
+                            Label(block.status == .skipped ? model.tr("取消跳过") : model.tr("跳过"), systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
                         }
                         .disabled(block.status == .done || block.status == .deleted)
 
                         Button {
                             model.delaySelected()
                         } label: {
-                            Label(block.status == .delayed ? "取消推迟" : "推迟 20 分钟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
+                            Label(block.status == .delayed ? model.tr("取消推迟") : model.tr("推迟 20 分钟"), systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
                         }
                         .disabled(block.status == .done || block.status == .deleted)
 
@@ -100,16 +100,16 @@ struct BlockDetailView: View {
                             Button(role: .destructive) {
                                 model.deleteSelectedBlock()
                             } label: {
-                                Label("删除", systemImage: "trash")
+                                Label(model.tr("删除"), systemImage: "trash")
                             }
                         } else {
-                            Text("已删除事项可以在上方点击“清理”彻底移除。")
+                            Text(model.tr("已删除事项可以在上方点击“清理”彻底移除。"))
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
                     }
                 } else {
-                    Text("选择一个时间块")
+                    Text(model.tr("选择一个时间块"))
                         .foregroundStyle(.secondary)
                 }
             }
@@ -120,30 +120,30 @@ struct BlockDetailView: View {
         .onChange(of: model.selectedBlockID) { _, _ in
             syncFields()
         }
-        .confirmationDialog("清理已删除事项？", isPresented: $showClearDeletedConfirmation, titleVisibility: .visible) {
-            Button("确定清理", role: .destructive) {
+        .confirmationDialog(model.tr("清理已删除事项？"), isPresented: $showClearDeletedConfirmation, titleVisibility: .visible) {
+            Button(model.tr("确定清理"), role: .destructive) {
                 model.clearDeletedBlocks()
             }
-            Button("取消", role: .cancel) {}
+            Button(model.tr("取消"), role: .cancel) {}
         } message: {
-            Text("将永久移除 \(deletedBlocksCount) 个已删除事项，此操作不能撤销。")
+            Text(model.trf("将永久移除 %d 个已删除事项，此操作不能撤销。", deletedBlocksCount))
         }
     }
 
     private var statusOverview: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("状态归类")
+                Text(model.tr("状态归类"))
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
-                Text("\(handledBlocks.count) 项")
+                Text(model.itemCountText(handledBlocks.count))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
 
             if statusGroups.isEmpty {
-                Text("暂无完成、跳过、推迟或删除事项。")
+                Text(model.tr("暂无完成、跳过、推迟或删除事项。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             } else {
@@ -181,7 +181,7 @@ struct BlockDetailView: View {
                 Circle()
                     .fill(status.tint)
                     .frame(width: 7, height: 7)
-                Text(status.title)
+                Text(model.statusTitle(status))
                     .font(.caption)
                     .fontWeight(.semibold)
                 Spacer()
@@ -193,7 +193,7 @@ struct BlockDetailView: View {
                     Button(role: .destructive) {
                         showClearDeletedConfirmation = true
                     } label: {
-                        Label("清理", systemImage: "trash.slash")
+                        Label(model.tr("清理"), systemImage: "trash.slash")
                     }
                     .font(.caption2)
                     .buttonStyle(.borderless)
@@ -230,21 +230,21 @@ struct BlockDetailView: View {
 
     private func conflictPanel(_ conflict: ScheduleConflict) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("时间冲突")
+            Text(model.tr("时间冲突"))
                 .font(.subheadline)
                 .fontWeight(.semibold)
-            Text("当前时间 \(conflict.proposedStart.displayString)-\(conflict.proposedEnd.displayString) 与「\(conflict.conflictingBlock.title)」重叠。")
+            Text(model.trf("当前时间 %@-%@ 与「%@」重叠。", conflict.proposedStart.displayString, conflict.proposedEnd.displayString, conflict.conflictingBlock.title))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let suggestion = conflict.suggestedWindow {
-                Text("建议改到 \(suggestion.start.displayString)-\(suggestion.end.displayString)，保持原任务时长并避开已有安排。")
+                Text(model.trf("建议改到 %@-%@，保持原任务时长并避开已有安排。", suggestion.start.displayString, suggestion.end.displayString))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("当前可用时间段内没有找到同等时长的连续空档，可以缩短任务或调整可用时间段。")
+                Text(model.tr("当前可用时间段内没有找到同等时长的连续空档，可以缩短任务或调整可用时间段。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -253,18 +253,18 @@ struct BlockDetailView: View {
             HStack {
                 if let suggestion = conflict.suggestedWindow,
                    conflict.editedBlockID == model.selectedBlockID {
-                    Button("采用建议时间") {
+                    Button(model.tr("采用建议时间")) {
                         startText = suggestion.start.displayString
                         endText = suggestion.end.displayString
                         _ = model.applyPendingConflictSuggestionToSelectedBlock()
                     }
                 }
-                Button("继续修改当前时间") {
+                Button(model.tr("继续修改当前时间")) {
                     startText = conflict.proposedStart.displayString
                     endText = conflict.proposedEnd.displayString
                     model.clearPendingConflict()
                 }
-                Button("去改冲突事项") {
+                Button(model.tr("去改冲突事项")) {
                     model.selectPendingConflictBlock()
                 }
             }
@@ -292,16 +292,16 @@ private struct DayStatusRingView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("24 小时状态")
+                    Text(model.tr("24 小时状态"))
                         .font(.headline)
-                    Text(blocks.isEmpty ? "今天还没有任务" : "\(plannedMinutes) 分钟已安排")
+                    Text(blocks.isEmpty ? model.tr("今天还没有任务") : model.trf("%d 分钟已安排", plannedMinutes))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
 
                 Spacer()
 
-                Text(blocks.isEmpty ? "空" : "\(blocks.count) 项")
+                Text(blocks.isEmpty ? model.tr("空") : model.itemCountText(blocks.count))
                     .font(.caption.monospacedDigit())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -322,7 +322,7 @@ private struct DayStatusRingView: View {
                     focusSummary
 
                     if blocks.isEmpty {
-                        Text("添加任务后，这里会按一天 24 小时展示各时间段的执行状态。")
+                        Text(model.tr("添加任务后，这里会按一天 24 小时展示各时间段的执行状态。"))
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                     }
@@ -361,7 +361,7 @@ private struct DayStatusRingView: View {
                         )
                         .stroke(block.status.tint, style: StrokeStyle(lineWidth: 18, lineCap: .butt))
                         .frame(width: clockSize, height: clockSize)
-                        .help("\(block.start.displayString)-\(block.end.displayString) · \(block.title) · \(block.status.title)")
+                        .help("\(block.start.displayString)-\(block.end.displayString) · \(block.title) · \(model.statusTitle(block.status))")
                     }
                 }
             }
@@ -403,13 +403,13 @@ private struct DayStatusRingView: View {
                     focusMinute(minute(at: value.location))
                 }
         )
-        .help("点击表盘查看该时间点的任务或空闲状态")
+        .help(model.tr("点击表盘查看该时间点的任务或空闲状态"))
     }
 
     private var ringRangeLegend: some View {
         VStack(alignment: .leading, spacing: 4) {
-            ringRangeRow(label: "内圈", range: "00:00-12:00", color: morningRingBaseColor)
-            ringRangeRow(label: "外圈", range: "12:00-24:00", color: afternoonRingBaseColor)
+            ringRangeRow(label: model.tr("内圈"), range: "00:00-12:00", color: morningRingBaseColor)
+            ringRangeRow(label: model.tr("外圈"), range: "12:00-24:00", color: afternoonRingBaseColor)
         }
         .frame(width: clockSize, alignment: .center)
     }
@@ -436,7 +436,7 @@ private struct DayStatusRingView: View {
 
     private var statusLegendPanel: some View {
         VStack(alignment: .leading, spacing: 7) {
-            Text("状态示意")
+            Text(model.tr("状态示意"))
                 .font(.caption)
                 .fontWeight(.semibold)
 
@@ -461,17 +461,17 @@ private struct DayStatusRingView: View {
                             .frame(width: 8, height: 8)
                             .padding(.top, 5)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("\(timeString(focusedMinute)) 空闲")
+                            Text(model.trf("%@ 空闲", timeString(focusedMinute)))
                                 .font(.caption)
                                 .fontWeight(.semibold)
-                            Text("空闲区间 \(timeString(idle.start))-\(timeString(idle.end))")
+                            Text(model.trf("空闲区间 %@-%@", timeString(idle.start), timeString(idle.end)))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }
                 } else {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(timeString(focusedMinute)) 有 \(hits.count) 项任务")
+                        Text(model.trf("%@ 有 %d 项任务", timeString(focusedMinute), hits.count))
                             .font(.caption)
                             .fontWeight(.semibold)
                         ForEach(hits.prefix(3)) { block in
@@ -487,7 +487,7 @@ private struct DayStatusRingView: View {
                                         Text(block.title)
                                             .font(.caption)
                                             .lineLimit(1)
-                                        Text("\(block.start.displayString)-\(block.end.displayString) · \(block.status.title)")
+                                        Text("\(block.start.displayString)-\(block.end.displayString) · \(model.statusTitle(block.status))")
                                             .font(.caption2.monospacedDigit())
                                             .foregroundStyle(.secondary)
                                     }
@@ -501,14 +501,14 @@ private struct DayStatusRingView: View {
                         }
 
                         if hits.count > 3 {
-                            Text("还有 \(hits.count - 3) 项同时进行")
+                            Text(model.trf("还有 %d 项同时进行", hits.count - 3))
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                         }
                     }
                 }
             } else {
-                Text("点击表盘查看任务或空闲。")
+                Text(model.tr("点击表盘查看任务或空闲。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -536,14 +536,14 @@ private struct DayStatusRingView: View {
         if let focusedMinute {
             return timeString(focusedMinute)
         }
-        return blocks.isEmpty ? "待规划" : "\(completionPercent)%"
+        return blocks.isEmpty ? model.tr("待规划") : "\(completionPercent)%"
     }
 
     private var centerSubtitle: String {
         if let focusedMinute {
-            return blocks(at: focusedMinute).isEmpty ? "空闲" : "任务"
+            return blocks(at: focusedMinute).isEmpty ? model.tr("空闲") : model.tr("任务")
         }
-        return blocks.isEmpty ? "空闲" : "完成"
+        return blocks.isEmpty ? model.tr("空闲") : model.tr("完成")
     }
 
     private var hourLabels: [(minute: Int, title: String)] {
@@ -558,7 +558,7 @@ private struct DayStatusRingView: View {
             Circle()
                 .fill(status.tint)
                 .frame(width: 8, height: 8)
-            Text(status.title)
+            Text(model.statusTitle(status))
                 .font(.caption2)
                 .lineLimit(1)
             Spacer(minLength: 0)

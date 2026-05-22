@@ -6,19 +6,19 @@ struct ReviewView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             HStack {
-                Text("\(model.selectedDateTitle)复盘")
+                Text(model.trf("%@复盘", model.selectedDateTitle))
                     .font(.title2)
                     .fontWeight(.semibold)
                 Spacer()
                 Button {
                     model.finishDay()
                 } label: {
-                    Label("结束", systemImage: "stop.circle")
+                    Label(model.tr("结束"), systemImage: "stop.circle")
                 }
                 Button {
                     model.runConfiguredAIReview()
                 } label: {
-                    Label("\(model.settings.aiProvider.title) 复盘", systemImage: "sparkles")
+                    Label(model.trf("%@ 复盘", model.settings.aiProvider.localizedTitle(model.effectiveLanguage)), systemImage: "sparkles")
                 }
                 .disabled(model.isReviewingWithAI)
             }
@@ -48,13 +48,13 @@ struct ReviewView: View {
                     }
                     Spacer()
                     if let actual = model.actualDurationMinutes(for: block) {
-                        Text("实际 \(actual)m")
+                        Text(model.trf("实际 %dm", actual))
                             .foregroundStyle(.secondary)
                     } else {
-                        Text("未记录")
+                        Text(model.tr("未记录"))
                             .foregroundStyle(.tertiary)
                     }
-                    Text(block.status.title)
+                    Text(model.statusTitle(block.status))
                         .frame(width: 80, alignment: .trailing)
                         .foregroundStyle(block.status.tint)
                 }

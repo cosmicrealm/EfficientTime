@@ -117,7 +117,7 @@ public protocol AIPlanningService: Sendable {
     func extractTasks(from input: String, context: PlanningContext) async throws -> [TaskDraft]
     func askClarifyingQuestions(context: PlanningContext) async throws -> [String]
     func proposeSchedule(context: PlanningContext) async throws -> PlanDraft
-    func summarizeDay(plan: DayPlan, logs: [ExecutionLog]) async throws -> String
+    func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String) async throws -> String
 }
 
 public enum AIPlanningError: Error, Equatable, LocalizedError {
@@ -128,9 +128,9 @@ public enum AIPlanningError: Error, Equatable, LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "请先在设置中配置 DeepSeek API Key。"
+            return "请先在设置中配置当前 AI 服务商的 API Key。"
         case let .httpStatus(status):
-            return "DeepSeek 请求失败，HTTP 状态码：\(status)。"
+            return "AI 请求失败，HTTP 状态码：\(status)。"
         case let .invalidResponse(message):
             return message
         }
@@ -162,6 +162,54 @@ public struct ArkConfiguration: Sendable {
         apiKey: String? = nil,
         baseURL: URL = URL(string: "https://ark.cn-beijing.volces.com/api/v3")!,
         model: String = "doubao-seed-2-0-pro-260215"
+    ) {
+        self.apiKey = apiKey
+        self.baseURL = baseURL
+        self.model = model
+    }
+}
+
+public struct OpenAIConfiguration: Sendable {
+    public var apiKey: String?
+    public var baseURL: URL
+    public var model: String
+
+    public init(
+        apiKey: String? = nil,
+        baseURL: URL = URL(string: "https://api.openai.com/v1")!,
+        model: String = "gpt-5.4-mini"
+    ) {
+        self.apiKey = apiKey
+        self.baseURL = baseURL
+        self.model = model
+    }
+}
+
+public struct GeminiConfiguration: Sendable {
+    public var apiKey: String?
+    public var baseURL: URL
+    public var model: String
+
+    public init(
+        apiKey: String? = nil,
+        baseURL: URL = URL(string: "https://generativelanguage.googleapis.com")!,
+        model: String = "gemini-3.5-flash"
+    ) {
+        self.apiKey = apiKey
+        self.baseURL = baseURL
+        self.model = model
+    }
+}
+
+public struct ClaudeConfiguration: Sendable {
+    public var apiKey: String?
+    public var baseURL: URL
+    public var model: String
+
+    public init(
+        apiKey: String? = nil,
+        baseURL: URL = URL(string: "https://api.anthropic.com")!,
+        model: String = "claude-sonnet-4-6"
     ) {
         self.apiKey = apiKey
         self.baseURL = baseURL
@@ -205,7 +253,7 @@ public actor DeepSeekPlanningService: AIPlanningService {
                 默认休息为：\(context.defaultSchedule.breakDescription)。未指定时间的工作任务不要占用这些休息时段。
                 如果用户没有指定耗时，请根据任务内容估算 estimatedDurationMinutes，不要使用机械固定值。
                 不同任务允许安排在同一时间；如果输入里有重复或同名任务，请合并成一个任务。
-                assumptions 每个任务最多 1 条中文短句。不要反问用户，不要输出长解释。
+                assumptions 每个任务最多 1 条短句，语言遵循用户输入中的输出语言要求。不要反问用户，不要输出长解释。
                 你只需要给建议；最终基础校验和同名任务合并会由本地排程器完成。
                 """,
                 packedContext: packedContext,
@@ -247,11 +295,11 @@ public actor DeepSeekPlanningService: AIPlanningService {
         return try payload.planDraft(date: context.date)
     }
 
-    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog]) async throws -> String {
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
         try ensureConfigured()
         let payload: DeepSeekSummaryPayload = try await sendJSONRequest(
             systemPrompt: DeepSeekPrompts.dayReview,
-            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs),
+            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs, outputLanguage: outputLanguage),
             effort: .normal,
             maxTokens: 1_500
         )
@@ -351,11 +399,11 @@ public actor DeepSeekPlanningService: AIPlanningService {
         return nil
     }
 
-    fileprivate static func invalidJSONMessage(from error: Error, content: String) -> String {
+    fileprivate static func invalidJSONMessage(from error: Error, content: String, providerName: String = "DeepSeek") -> String {
         if content.contains("{") && extractJSONObject(from: content) == nil {
-            return "DeepSeek 返回的规划结果不完整，通常是任务太多或输出过长导致 JSON 被截断。请再试一次，或把任务拆成两批规划。底层错误：\(error.localizedDescription)"
+            return "\(providerName) 返回的规划结果不完整，通常是任务太多或输出过长导致 JSON 被截断。请再试一次，或把任务拆成两批规划。底层错误：\(error.localizedDescription)"
         }
-        return "DeepSeek 返回的规划结果不是合法 JSON。请再试一次，或减少一次输入的任务数量。底层错误：\(error.localizedDescription)"
+        return "\(providerName) 返回的规划结果不是合法 JSON。请再试一次，或减少一次输入的任务数量。底层错误：\(error.localizedDescription)"
     }
 }
 
@@ -382,7 +430,7 @@ public actor ArkPlanningService: AIPlanningService {
                 默认休息为：\(context.defaultSchedule.breakDescription)。未指定时间的工作任务不要占用这些休息时段。
                 如果用户没有指定耗时，请根据任务内容估算 estimatedDurationMinutes，不要使用机械固定值。
                 不同任务允许安排在同一时间；如果输入里有重复或同名任务，请合并成一个任务。
-                assumptions 每个任务最多 1 条中文短句。不要反问用户，不要输出长解释。
+                assumptions 每个任务最多 1 条短句，语言遵循用户输入中的输出语言要求。不要反问用户，不要输出长解释。
                 你只需要给建议；最终基础校验和同名任务合并会由本地排程器完成。
                 """,
                 packedContext: contextPacker.pack(context),
@@ -401,11 +449,11 @@ public actor ArkPlanningService: AIPlanningService {
         throw AIPlanningError.invalidResponse("火山方舟当前用于生成任务建议，暂未启用独立时间表草稿接口。")
     }
 
-    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog]) async throws -> String {
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
         try ensureConfigured()
         let payload: DeepSeekSummaryPayload = try await sendJSONRequest(
             systemPrompt: DeepSeekPrompts.dayReview,
-            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs),
+            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs, outputLanguage: outputLanguage),
             maxTokens: 1_500
         )
         return payload.summary
@@ -468,7 +516,300 @@ public actor ArkPlanningService: AIPlanningService {
         do {
             return try JSONDecoder().decode(Response.self, from: contentData)
         } catch {
-            throw AIPlanningError.invalidResponse(DeepSeekPlanningService.invalidJSONMessage(from: error, content: content))
+            throw AIPlanningError.invalidResponse(DeepSeekPlanningService.invalidJSONMessage(from: error, content: content, providerName: "火山方舟"))
+        }
+    }
+}
+
+public actor OpenAIPlanningService: AIPlanningService {
+    private let configuration: OpenAIConfiguration
+    private let contextPacker: PlanningContextPacker
+
+    public init(
+        configuration: OpenAIConfiguration,
+        contextPacker: PlanningContextPacker = PlanningContextPacker()
+    ) {
+        self.configuration = configuration
+        self.contextPacker = contextPacker
+    }
+
+    public func extractTasks(from input: String, context: PlanningContext) async throws -> [TaskDraft] {
+        let payload: DeepSeekTaskExtractionPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.taskExtraction,
+            userPrompt: DeepSeekPrompts.userPrompt(
+                instruction: Self.taskExtractionInstruction(context: context),
+                packedContext: contextPacker.pack(context),
+                rawInput: input
+            ),
+            maxTokens: taskExtractionTokenBudget(for: input)
+        )
+        return payload.tasks.map(\.taskDraft)
+    }
+
+    public func askClarifyingQuestions(context: PlanningContext) async throws -> [String] {
+        []
+    }
+
+    public func proposeSchedule(context: PlanningContext) async throws -> PlanDraft {
+        throw AIPlanningError.invalidResponse("OpenAI 当前用于生成任务建议，暂未启用独立时间表草稿接口。")
+    }
+
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
+        let payload: DeepSeekSummaryPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.dayReview,
+            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs, outputLanguage: outputLanguage),
+            maxTokens: 1_500
+        )
+        return payload.summary
+    }
+
+    private func sendJSONRequest<Response: Decodable>(
+        systemPrompt: String,
+        userPrompt: String,
+        maxTokens: Int
+    ) async throws -> Response {
+        guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+            throw AIPlanningError.notConfigured
+        }
+
+        let requestPayload = OpenAIChatRequest(
+            model: configuration.model,
+            messages: [
+                OpenAIChatMessage(role: "system", content: systemPrompt),
+                OpenAIChatMessage(role: "user", content: userPrompt)
+            ],
+            responseFormat: OpenAIResponseFormat(type: "json_object"),
+            maxCompletionTokens: maxTokens
+        )
+
+        var request = URLRequest(url: configuration.baseURL.appendingPathComponent("chat/completions"), timeoutInterval: 90)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Bearer \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONEncoder.deepSeek.encode(requestPayload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200..<300).contains(httpResponse.statusCode) {
+            throw AIPlanningError.httpStatus(httpResponse.statusCode)
+        }
+
+        let completion = try JSONDecoder().decode(OpenAIChatResponse.self, from: data)
+        guard let content = completion.choices.first?.message.content,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            throw AIPlanningError.invalidResponse("OpenAI 返回了空内容。")
+        }
+
+        return try Self.decodeJSONPayload(Response.self, providerName: "OpenAI", content: content)
+    }
+}
+
+public actor GeminiPlanningService: AIPlanningService {
+    private let configuration: GeminiConfiguration
+    private let contextPacker: PlanningContextPacker
+
+    public init(
+        configuration: GeminiConfiguration,
+        contextPacker: PlanningContextPacker = PlanningContextPacker()
+    ) {
+        self.configuration = configuration
+        self.contextPacker = contextPacker
+    }
+
+    public func extractTasks(from input: String, context: PlanningContext) async throws -> [TaskDraft] {
+        let payload: DeepSeekTaskExtractionPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.taskExtraction,
+            userPrompt: DeepSeekPrompts.userPrompt(
+                instruction: Self.taskExtractionInstruction(context: context),
+                packedContext: contextPacker.pack(context),
+                rawInput: input
+            ),
+            maxTokens: taskExtractionTokenBudget(for: input)
+        )
+        return payload.tasks.map(\.taskDraft)
+    }
+
+    public func askClarifyingQuestions(context: PlanningContext) async throws -> [String] {
+        []
+    }
+
+    public func proposeSchedule(context: PlanningContext) async throws -> PlanDraft {
+        throw AIPlanningError.invalidResponse("Gemini 当前用于生成任务建议，暂未启用独立时间表草稿接口。")
+    }
+
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
+        let payload: DeepSeekSummaryPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.dayReview,
+            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs, outputLanguage: outputLanguage),
+            maxTokens: 1_500
+        )
+        return payload.summary
+    }
+
+    private func sendJSONRequest<Response: Decodable>(
+        systemPrompt: String,
+        userPrompt: String,
+        maxTokens: Int
+    ) async throws -> Response {
+        guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+            throw AIPlanningError.notConfigured
+        }
+
+        let requestPayload = GeminiGenerateContentRequest(
+            systemInstruction: GeminiContent(parts: [GeminiPart(text: systemPrompt)]),
+            contents: [
+                GeminiContent(
+                    role: "user",
+                    parts: [GeminiPart(text: userPrompt)]
+                )
+            ],
+            generationConfig: GeminiGenerationConfig(
+                responseMimeType: "application/json",
+                maxOutputTokens: maxTokens,
+                temperature: 0.2
+            )
+        )
+
+        let modelPath = "v1beta/models/\(configuration.model):generateContent"
+        var request = URLRequest(url: configuration.baseURL.appendingPathComponent(modelPath), timeoutInterval: 90)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "x-goog-api-key")
+        request.httpBody = try JSONEncoder.deepSeek.encode(requestPayload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200..<300).contains(httpResponse.statusCode) {
+            throw AIPlanningError.httpStatus(httpResponse.statusCode)
+        }
+
+        let completion = try JSONDecoder().decode(GeminiGenerateContentResponse.self, from: data)
+        guard let content = completion.outputText,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            throw AIPlanningError.invalidResponse("Gemini 返回了空内容。")
+        }
+
+        return try Self.decodeJSONPayload(Response.self, providerName: "Gemini", content: content)
+    }
+}
+
+public actor ClaudePlanningService: AIPlanningService {
+    private let configuration: ClaudeConfiguration
+    private let contextPacker: PlanningContextPacker
+
+    public init(
+        configuration: ClaudeConfiguration,
+        contextPacker: PlanningContextPacker = PlanningContextPacker()
+    ) {
+        self.configuration = configuration
+        self.contextPacker = contextPacker
+    }
+
+    public func extractTasks(from input: String, context: PlanningContext) async throws -> [TaskDraft] {
+        let payload: DeepSeekTaskExtractionPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.taskExtraction,
+            userPrompt: DeepSeekPrompts.userPrompt(
+                instruction: Self.taskExtractionInstruction(context: context),
+                packedContext: contextPacker.pack(context),
+                rawInput: input
+            ),
+            maxTokens: taskExtractionTokenBudget(for: input)
+        )
+        return payload.tasks.map(\.taskDraft)
+    }
+
+    public func askClarifyingQuestions(context: PlanningContext) async throws -> [String] {
+        []
+    }
+
+    public func proposeSchedule(context: PlanningContext) async throws -> PlanDraft {
+        throw AIPlanningError.invalidResponse("Claude 当前用于生成任务建议，暂未启用独立时间表草稿接口。")
+    }
+
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
+        let payload: DeepSeekSummaryPayload = try await sendJSONRequest(
+            systemPrompt: DeepSeekPrompts.dayReview,
+            userPrompt: DeepSeekPrompts.reviewPrompt(plan: plan, logs: logs, outputLanguage: outputLanguage),
+            maxTokens: 1_500
+        )
+        return payload.summary
+    }
+
+    private func sendJSONRequest<Response: Decodable>(
+        systemPrompt: String,
+        userPrompt: String,
+        maxTokens: Int
+    ) async throws -> Response {
+        guard let apiKey = configuration.apiKey, !apiKey.isEmpty else {
+            throw AIPlanningError.notConfigured
+        }
+
+        let requestPayload = ClaudeMessagesRequest(
+            model: configuration.model,
+            maxTokens: maxTokens,
+            temperature: 0.2,
+            system: systemPrompt,
+            messages: [ClaudeInputMessage(role: "user", content: userPrompt)]
+        )
+
+        var request = URLRequest(url: configuration.baseURL.appendingPathComponent("v1/messages"), timeoutInterval: 90)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue(apiKey, forHTTPHeaderField: "x-api-key")
+        request.setValue("2023-06-01", forHTTPHeaderField: "anthropic-version")
+        request.httpBody = try JSONEncoder.deepSeek.encode(requestPayload)
+
+        let (data, response) = try await URLSession.shared.data(for: request)
+        if let httpResponse = response as? HTTPURLResponse,
+           !(200..<300).contains(httpResponse.statusCode) {
+            throw AIPlanningError.httpStatus(httpResponse.statusCode)
+        }
+
+        let completion = try JSONDecoder().decode(ClaudeMessagesResponse.self, from: data)
+        guard let content = completion.outputText,
+              !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else {
+            throw AIPlanningError.invalidResponse("Claude 返回了空内容。")
+        }
+
+        return try Self.decodeJSONPayload(Response.self, providerName: "Claude", content: content)
+    }
+}
+
+private extension AIPlanningService {
+    static func taskExtractionInstruction(context: PlanningContext) -> String {
+        """
+        请从用户输入中拆分任务，并给出轻量的初始时间建议。输出 json，字段必须符合示例结构。
+        默认规划范围是 \(context.defaultSchedule.windowDescription)。如果用户没有指定开始时间，请按输入顺序估算 fixedStart。
+        默认休息为：\(context.defaultSchedule.breakDescription)。未指定时间的工作任务不要占用这些休息时段。
+        如果用户没有指定耗时，请根据任务内容估算 estimatedDurationMinutes，不要使用机械固定值。
+        不同任务允许安排在同一时间；如果输入里有重复或同名任务，请合并成一个任务。
+        assumptions 每个任务最多 1 条短句，语言遵循用户输入中的输出语言要求。不要反问用户，不要输出长解释。
+        你只需要给建议；最终基础校验和同名任务合并会由本地排程器完成。
+        """
+    }
+
+    static func decodeJSONPayload<Response: Decodable>(
+        _ responseType: Response.Type,
+        providerName: String,
+        content: String
+    ) throws -> Response {
+        let jsonContent = DeepSeekPlanningService.extractJSONObject(from: content) ?? content
+        guard let contentData = jsonContent.data(using: .utf8) else {
+            throw AIPlanningError.invalidResponse("\(providerName) 返回内容不是 UTF-8。")
+        }
+        do {
+            return try JSONDecoder().decode(Response.self, from: contentData)
+        } catch {
+            throw AIPlanningError.invalidResponse(
+                DeepSeekPlanningService.invalidJSONMessage(
+                    from: error,
+                    content: content,
+                    providerName: providerName
+                )
+            )
         }
     }
 }
@@ -478,14 +819,14 @@ private enum DeepSeekPrompts {
     你是 EfficientTime 的任务拆分模块。
     只返回合法 json，不要包含 markdown。
     为严格时间表拆分任务。
-    所有自然语言内容必须使用简体中文；JSON key 保持英文；枚举值保持下方给定的英文值。
+    所有自然语言内容必须使用用户消息里要求的输出语言；如果用户没有指定输出语言，使用简体中文。JSON key 保持英文；枚举值保持下方给定的英文值。
     这是一个“规划建议”任务，不是问答任务。不要反问用户。
     默认规划范围和固定休息以用户消息中的规划配置为准。
     如果用户没有给开始时间，你必须自己估算 fixedStart，并让任务按输入顺序在默认规划范围和可用时间段内不重叠排列。
     除非用户明确指定，不要把任务安排到默认规划范围之外，尤其不要安排在清晨、凌晨或深夜。
     默认休息只作为避让约束；除非用户明确写了吃饭或休息任务，不要额外生成 rest 任务。
     如果用户没有给耗时，你必须根据任务内容估算 estimatedDurationMinutes，例如快速检查 10-20 分钟、阅读/整理 30-90 分钟、深度编码 60-180 分钟、复盘 15-30 分钟。
-    每个任务的 assumptions 最多 1 条中文短句，说明关键估算依据。
+    每个任务的 assumptions 最多 1 条短句，使用同一种输出语言说明关键估算依据。
     顶层 assumptions 和 clarifyingQuestions 返回空数组。
     JSON 结构：
     {
@@ -511,7 +852,7 @@ private enum DeepSeekPrompts {
     你是 EfficientTime 的规划确认模块。
     只返回合法 json，不要包含 markdown。
     在生成严格时间表前，最多提出 3 个需要用户确认的具体问题。
-    所有问题必须使用简体中文，不要中英混写。
+    所有问题必须使用用户消息里要求的输出语言；如果用户没有指定输出语言，使用简体中文。
     JSON 结构：
     { "clarifyingQuestions": ["string"] }
     """
@@ -522,7 +863,7 @@ private enum DeepSeekPrompts {
     默认规划范围和固定休息以用户消息中的规划配置为准。
     在可用时间段内生成不重叠的时间块草稿；除非用户明确指定，不要把时间块安排到默认规划范围之外。
     默认休息只作为避让约束；除非用户明确写了吃饭或休息任务，不要额外生成休息时间块。
-    所有自然语言内容必须使用简体中文；JSON key 保持英文。
+    所有自然语言内容必须使用用户消息里要求的输出语言；如果用户没有指定输出语言，使用简体中文。JSON key 保持英文。
     JSON 结构：
     {
       "blocks": [
@@ -538,8 +879,8 @@ private enum DeepSeekPrompts {
     你是 EfficientTime 的每日复盘模块。
     只返回合法 json，不要包含 markdown。
     简短、具体、可执行地总结当天执行情况。
-    summary 必须全部使用简体中文，不要中英混写，不要输出英文事件名、英文原因或英文状态。
-    如果输入中出现英文标识，请理解含义后翻译成中文再总结，不要原样引用。
+    summary 必须全部使用用户消息里要求的输出语言，不要中英混写，不要输出英文事件名、英文原因或英文状态。
+    如果输入中出现内部标识，请理解含义后翻译成目标语言再总结，不要原样引用。
     JSON 结构：
     { "summary": "string" }
     """
@@ -562,12 +903,12 @@ private enum DeepSeekPrompts {
         """
     }
 
-    static func reviewPrompt(plan: DayPlan, logs: [ExecutionLog]) -> String {
+    static func reviewPrompt(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String) -> String {
         let review = DeepSeekReviewInput(plan: plan, logs: logs)
         let data = (try? JSONEncoder.deepSeek.encode(review)) ?? Data()
         let json = String(data: data, encoding: .utf8) ?? "{}"
         return """
-        请根据下面的中文复盘输入生成 summary。summary 只能使用简体中文。
+        请根据下面的复盘输入生成 summary。summary 只能使用 \(outputLanguage)。
 
         复盘输入 json：
         \(json)
@@ -702,6 +1043,117 @@ private struct ArkResponsesResponse: Decodable {
         var type: String?
         var text: String?
     }
+}
+
+private struct OpenAIChatRequest: Encodable {
+    var model: String
+    var messages: [OpenAIChatMessage]
+    var responseFormat: OpenAIResponseFormat
+    var maxCompletionTokens: Int
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case messages
+        case responseFormat = "response_format"
+        case maxCompletionTokens = "max_completion_tokens"
+    }
+}
+
+private struct OpenAIChatMessage: Codable {
+    var role: String
+    var content: String
+}
+
+private struct OpenAIResponseFormat: Codable {
+    var type: String
+}
+
+private struct OpenAIChatResponse: Decodable {
+    var choices: [Choice]
+
+    struct Choice: Decodable {
+        var message: Message
+    }
+
+    struct Message: Decodable {
+        var content: String?
+    }
+}
+
+private struct GeminiGenerateContentRequest: Encodable {
+    var systemInstruction: GeminiContent
+    var contents: [GeminiContent]
+    var generationConfig: GeminiGenerationConfig
+}
+
+private struct GeminiContent: Encodable {
+    var role: String?
+    var parts: [GeminiPart]
+
+    init(role: String? = nil, parts: [GeminiPart]) {
+        self.role = role
+        self.parts = parts
+    }
+}
+
+private struct GeminiPart: Codable {
+    var text: String
+}
+
+private struct GeminiGenerationConfig: Encodable {
+    var responseMimeType: String
+    var maxOutputTokens: Int
+    var temperature: Double
+}
+
+private struct GeminiGenerateContentResponse: Decodable {
+    var candidates: [Candidate]
+
+    var outputText: String? {
+        candidates.first?.content.parts.map(\.text).joined(separator: "\n")
+    }
+
+    struct Candidate: Decodable {
+        var content: Content
+    }
+
+    struct Content: Decodable {
+        var parts: [GeminiPart]
+    }
+}
+
+private struct ClaudeMessagesRequest: Encodable {
+    var model: String
+    var maxTokens: Int
+    var temperature: Double
+    var system: String
+    var messages: [ClaudeInputMessage]
+
+    enum CodingKeys: String, CodingKey {
+        case model
+        case maxTokens = "max_tokens"
+        case temperature
+        case system
+        case messages
+    }
+}
+
+private struct ClaudeInputMessage: Encodable {
+    var role: String
+    var content: String
+}
+
+private struct ClaudeMessagesResponse: Decodable {
+    var content: [ClaudeContentBlock]
+
+    var outputText: String? {
+        content.compactMap(\.text).joined(separator: "\n")
+    }
+}
+
+private struct ClaudeContentBlock: Decodable {
+    var type: String
+    var text: String?
 }
 
 private struct DeepSeekTaskExtractionPayload: Decodable {

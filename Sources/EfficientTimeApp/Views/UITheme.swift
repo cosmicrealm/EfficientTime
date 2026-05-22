@@ -54,11 +54,17 @@ enum CountdownStyle: String, Codable, CaseIterable, Sendable {
 enum AIProvider: String, Codable, CaseIterable, Sendable {
     case deepSeek
     case ark
+    case openAI
+    case gemini
+    case claude
 
     var title: String {
         switch self {
         case .deepSeek: "DeepSeek"
         case .ark: "火山方舟"
+        case .openAI: "OpenAI"
+        case .gemini: "Gemini"
+        case .claude: "Claude"
         }
     }
 
@@ -66,6 +72,9 @@ enum AIProvider: String, Codable, CaseIterable, Sendable {
         switch self {
         case .deepSeek: "粘贴 DeepSeek API Key（sk-...）"
         case .ark: "粘贴火山方舟 API Key（ARK_API_KEY）"
+        case .openAI: "粘贴 OpenAI API Key（sk-...）"
+        case .gemini: "粘贴 Gemini API Key（AIza...）"
+        case .claude: "粘贴 Claude API Key（sk-ant-...）"
         }
     }
 }

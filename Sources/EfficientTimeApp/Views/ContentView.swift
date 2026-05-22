@@ -27,22 +27,22 @@ struct ContentView: View {
                 }
                 .padding(.top, 6)
                 .tabItem {
-                    Label("计划", systemImage: "calendar")
+                    Label(model.tr("计划"), systemImage: "calendar")
                 }
 
                 AIPlanBuilderView()
                     .tabItem {
-                        Label("智能规划", systemImage: "sparkles")
+                        Label(model.tr("智能规划"), systemImage: "sparkles")
                     }
 
                 ReviewView()
                     .tabItem {
-                        Label("复盘", systemImage: "chart.bar.doc.horizontal")
+                        Label(model.tr("复盘"), systemImage: "chart.bar.doc.horizontal")
                     }
 
                 SettingsView()
                     .tabItem {
-                        Label("设置", systemImage: "gearshape")
+                        Label(model.tr("设置"), systemImage: "gearshape")
                     }
             }
             .tint(model.settings.accentColor)

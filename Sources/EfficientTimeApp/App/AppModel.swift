@@ -17,13 +17,13 @@ final class AppModel: ObservableObject {
     @Published var now = Date()
     @Published var aiDrafts: [TaskDraft] = []
     @Published var aiQuestions: [String] = []
-    @Published var aiStatusMessage = "AI 规划待开始。"
+    @Published var aiStatusMessage = ""
     @Published var isAIPlanning = false
     @Published var reviewAISummary = ""
     @Published var isReviewingWithAI = false
     @Published var pendingConflict: ScheduleConflict?
-    @Published var notificationAuthorizationStatus = "未知"
-    @Published var notificationAuthorizationHelp = "正在读取系统通知权限。"
+    @Published var notificationAuthorizationStatus = ""
+    @Published var notificationAuthorizationHelp = ""
 
     private let scheduler = RuleBasedScheduler()
     private let notificationScheduler = NotificationScheduler()
@@ -48,6 +48,9 @@ final class AppModel: ObservableObject {
         self.executionLogs = initial.logs
         self.settings = defaultSettings
         self.dailyWorkspaces = [date: initial]
+        self.aiStatusMessage = AppLocalization.text("AI 规划待开始。", language: defaultSettings.language)
+        self.notificationAuthorizationStatus = AppLocalization.text("未知", language: defaultSettings.language)
+        self.notificationAuthorizationHelp = AppLocalization.text("正在读取系统通知权限。", language: defaultSettings.language)
 
         Swift.Task {
             await loadWorkspaceIfAvailable()
@@ -62,10 +65,10 @@ final class AppModel: ObservableObject {
     var selectedDateTitle: String {
         let today = LocalDate.today()
         if selectedDate == today {
-            return "今天"
+            return tr("今天")
         }
         if selectedDate == today.adding(days: 1) {
-            return "明天"
+            return tr("明天")
         }
         return selectedDate.displayString
     }
@@ -75,7 +78,7 @@ final class AppModel: ObservableObject {
             return currentBlock.title
         }
         if let nextBlock {
-            return "Next \(nextBlock.start.displayString)"
+            return "\(tr("下一个")) \(nextBlock.start.displayString)"
         }
         return "EfficientTime"
     }
@@ -155,10 +158,10 @@ final class AppModel: ObservableObject {
         let plannedMinutes = blocks.reduce(0) { $0 + $1.durationMinutes }
         let actualMinutes = blocks.compactMap(actualDurationMinutes(for:)).reduce(0, +)
         return """
-        \(selectedDateTitle)计划：\(blocks.count) 个时间块，计划 \(plannedMinutes) 分钟。
-        已完成：\(done.count) 个；已跳过：\(skipped.count) 个；已推迟：\(delayed.count) 个。
-        已记录实际耗时：\(actualMinutes) 分钟；执行事件：\(executionLogs.count) 条。
-        状态：\(todayPlan.status.title)。
+        \(trf("%@计划：%d 个时间块，计划 %d 分钟。", selectedDateTitle, blocks.count, plannedMinutes))
+        \(trf("已完成：%d 个；已跳过：%d 个；已推迟：%d 个。", done.count, skipped.count, delayed.count))
+        \(trf("已记录实际耗时：%d 分钟；执行事件：%d 条。", actualMinutes, executionLogs.count))
+        \(trf("状态：%@。", planStatusTitle(todayPlan.status)))
         """
     }
 
@@ -184,9 +187,9 @@ final class AppModel: ObservableObject {
     var notificationRuntimeHelp: String {
         let bundleIdentifier = Bundle.main.bundleIdentifier ?? "未识别到 Bundle ID"
         let launchHint = Bundle.main.bundleURL.pathExtension == "app"
-            ? "当前以 .app 方式运行。"
-            : "当前可能是直接运行可执行文件；建议用 scripts/build_app_bundle.sh 构建后 open dist/EfficientTime.app。"
-        return "\(launchHint) 通知权限对应标识：\(bundleIdentifier)。"
+            ? tr("当前以 .app 方式运行。")
+            : tr("当前可能是直接运行可执行文件；建议用 scripts/build_app_bundle.sh 构建后 open dist/EfficientTime.app。")
+        return "\(launchHint) \(tr("通知权限对应标识："))\(bundleIdentifier)。"
     }
 
     func openMainWindow() {
@@ -225,7 +228,7 @@ final class AppModel: ObservableObject {
             Swift.Task { @MainActor in
                 if !granted {
                     self?.refreshNotificationAuthorizationStatus()
-                    self?.lastErrorMessage = "系统通知权限未开启，请在 macOS 设置里允许 EfficientTime 发送通知。"
+                    self?.lastErrorMessage = self?.tr("系统通知权限未开启，请在 macOS 设置里允许 EfficientTime 发送通知。")
                     return
                 }
                 self?.refreshNotificationAuthorizationStatus()
@@ -258,21 +261,21 @@ final class AppModel: ObservableObject {
 
     func sendTestNotification() {
         reminderPanelController.show(
-            title: "EfficientTime 测试提醒",
-            body: "如果系统通知不可用，这个置顶提醒仍会显示。",
+            title: tr("EfficientTime 测试提醒"),
+            body: tr("如果系统通知不可用，这个置顶提醒仍会显示。"),
             kind: .start
         )
         notificationScheduler.deliverNow(
             identifier: "efficienttime-test-\(UUID().uuidString)",
-            title: "EfficientTime 测试提醒",
-            body: "系统通知已触发。"
+            title: tr("EfficientTime 测试提醒"),
+            body: tr("系统通知已触发。")
         ) { [weak self] error in
             Swift.Task { @MainActor in
                 self?.refreshNotificationAuthorizationStatus()
                 if let error {
-                    self?.lastErrorMessage = "系统通知发送失败：\(error.localizedDescription)。已显示 EfficientTime 置顶提醒。"
+                    self?.lastErrorMessage = self?.trf("系统通知发送失败：%@。已显示 EfficientTime 置顶提醒。", error.localizedDescription)
                 } else {
-                    self?.lastErrorMessage = "测试通知已发送；如果没看到横幅，请检查 macOS 通知设置里的 EfficientTime。"
+                    self?.lastErrorMessage = self?.tr("测试通知已发送；如果没看到横幅，请检查 macOS 通知设置里的 EfficientTime。")
                 }
             }
         }
@@ -338,7 +341,7 @@ final class AppModel: ObservableObject {
         }
         todayPlan.status = .finished
         appendSystemLog(eventType: .completed, payload: ["scope": "day"])
-        lastErrorMessage = "已结束 \(selectedDateTitle) 的计划。"
+        lastErrorMessage = trf("已结束 %@ 的计划。", selectedDateTitle)
         saveWorkspace()
     }
 
@@ -359,7 +362,7 @@ final class AppModel: ObservableObject {
                 ),
                 logs: []
             )
-            lastErrorMessage = "已清空 \(date.displayString) 的所有任务。"
+            lastErrorMessage = trf("已清空 %@ 的所有任务。", date.displayString)
             saveWorkspace()
             return
         }
@@ -376,7 +379,7 @@ final class AppModel: ObservableObject {
         selectedBlockID = nil
         pendingConflict = nil
         reviewAISummary = ""
-        lastErrorMessage = "已清空 \(selectedDateTitle) 的所有任务。"
+        lastErrorMessage = trf("已清空 %@ 的所有任务。", selectedDateTitle)
         saveWorkspace()
     }
 
@@ -409,7 +412,7 @@ final class AppModel: ObservableObject {
             reviewAISummary = ""
         }
 
-        lastErrorMessage = "已删除 \(date.displayString) 的计划。"
+        lastErrorMessage = trf("已删除 %@ 的计划。", date.displayString)
         saveWorkspace()
     }
 
@@ -425,7 +428,7 @@ final class AppModel: ObservableObject {
         do {
             let windows = try parseTimeWindows(text)
             guard !windows.isEmpty else {
-                lastErrorMessage = "至少需要一个可用时间段。"
+                lastErrorMessage = tr("至少需要一个可用时间段。")
                 return false
             }
             todayPlan = DayPlan(
@@ -439,7 +442,7 @@ final class AppModel: ObservableObject {
             lastErrorMessage = nil
             return true
         } catch {
-            lastErrorMessage = "时间段格式需要类似：09:30-21:30。"
+            lastErrorMessage = tr("时间段格式需要类似：09:30-21:30。")
             return false
         }
     }
@@ -447,7 +450,7 @@ final class AppModel: ObservableObject {
     func addScheduledTask(title: String, startText: String, endText: String) -> Bool {
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedTitle.isEmpty else {
-            lastErrorMessage = "任务名称不能为空。"
+            lastErrorMessage = tr("任务名称不能为空。")
             return false
         }
 
@@ -461,7 +464,7 @@ final class AppModel: ObservableObject {
                 fallback: start.adding(minutes: 90) ?? (settings.aiPlanningDefaults.isValid ? settings.aiPlanningDefaults.end : AIPlanningDefaults.defaultEnd)
             )
             guard start < end else {
-                lastErrorMessage = "开始时间必须早于结束时间。"
+                lastErrorMessage = tr("开始时间必须早于结束时间。")
                 return false
             }
             let task = EfficientTimeCore.Task(
@@ -481,7 +484,7 @@ final class AppModel: ObservableObject {
             pendingConflict = nil
             return true
         } catch {
-            lastErrorMessage = "时间格式需要是 HH:mm，例如 09:30。"
+            lastErrorMessage = tr("时间格式需要是 HH:mm，例如 09:30。")
             return false
         }
     }
@@ -552,26 +555,28 @@ final class AppModel: ObservableObject {
 
     func markTimelineActionTargetDone() {
         guard let target = timelineActionTargetBlock else {
-            lastErrorMessage = "请先选择一个时间块，或等到当前时间进入某个任务。"
+            lastErrorMessage = tr("请先选择一个时间块，或等到当前时间进入某个任务。")
             return
         }
         selectedBlockID = target.id
         updateBlock(target.id, status: .done)
-        lastErrorMessage = "已完成「\(target.title)」。"
+        lastErrorMessage = trf("已完成「%@」。", target.title)
     }
 
     func skipTimelineActionTarget() {
         guard let target = timelineActionTargetBlock else {
-            lastErrorMessage = "请先选择一个时间块，或等到当前时间进入某个任务。"
+            lastErrorMessage = tr("请先选择一个时间块，或等到当前时间进入某个任务。")
             return
         }
         skipBlock(target.id)
-        lastErrorMessage = target.status == .skipped ? "已取消跳过「\(target.title)」。" : "已跳过「\(target.title)」。"
+        lastErrorMessage = target.status == .skipped
+            ? trf("已取消跳过「%@」。", target.title)
+            : trf("已跳过「%@」。", target.title)
     }
 
     func delayTimelineActionTarget() {
         guard let target = timelineActionTargetBlock else {
-            lastErrorMessage = "请先选择一个时间块，或等到当前时间进入某个任务。"
+            lastErrorMessage = tr("请先选择一个时间块，或等到当前时间进入某个任务。")
             return
         }
         delayBlock(target.id)
@@ -609,13 +614,13 @@ final class AppModel: ObservableObject {
         selectedBlockID = block.id
         appendSystemLog(eventType: .replanned, blockId: block.id, payload: ["reason": "soft_delete"])
         saveWorkspace()
-        lastErrorMessage = "已将「\(block.title)」移到已删除。"
+        lastErrorMessage = trf("已将「%@」移到已删除。", block.title)
     }
 
     func clearDeletedBlocks() {
         let deletedBlocks = todayPlan.blocks.filter { $0.status == .deleted }
         guard !deletedBlocks.isEmpty else {
-            lastErrorMessage = "当前没有需要清理的已删除事项。"
+            lastErrorMessage = tr("当前没有需要清理的已删除事项。")
             return
         }
         let deletedIDs = Set(deletedBlocks.map(\.id))
@@ -625,18 +630,18 @@ final class AppModel: ObservableObject {
         }
         appendSystemLog(eventType: .replanned, blockId: deletedBlocks.first?.id, payload: ["reason": "clear_deleted", "count": "\(deletedBlocks.count)"])
         saveWorkspace()
-        lastErrorMessage = "已彻底清理 \(deletedBlocks.count) 个已删除事项。"
+        lastErrorMessage = trf("已彻底清理 %d 个已删除事项。", deletedBlocks.count)
     }
 
     func updateSelectedBlock(startText: String, endText: String) -> Bool {
         guard let selectedBlockID,
               let blockIndex = todayPlan.blocks.firstIndex(where: { $0.id == selectedBlockID })
         else {
-            lastErrorMessage = "请先选择一个时间块。"
+            lastErrorMessage = tr("请先选择一个时间块。")
             return false
         }
         guard todayPlan.blocks[blockIndex].status != .deleted else {
-            lastErrorMessage = "已删除事项不能更新时间；可以先从已删除中清理。"
+            lastErrorMessage = tr("已删除事项不能更新时间；可以先从已删除中清理。")
             return false
         }
 
@@ -644,7 +649,7 @@ final class AppModel: ObservableObject {
             let start = try ClockTime(parsing: startText)
             let end = try ClockTime(parsing: endText)
             guard start < end else {
-                lastErrorMessage = "开始时间必须早于结束时间。"
+                lastErrorMessage = tr("开始时间必须早于结束时间。")
                 return false
             }
 
@@ -653,7 +658,7 @@ final class AppModel: ObservableObject {
             editedBlock.end = end
 
             guard todayPlan.availableWindows.contains(where: { $0.contains(editedBlock) }) else {
-                lastErrorMessage = "时间块必须落在可用时间段内。"
+                lastErrorMessage = tr("时间块必须落在可用时间段内。")
                 return false
             }
             todayPlan.blocks[blockIndex] = editedBlock
@@ -672,7 +677,7 @@ final class AppModel: ObservableObject {
             pendingConflict = nil
             return true
         } catch {
-            lastErrorMessage = "时间格式需要是 HH:mm，例如 09:30。"
+            lastErrorMessage = tr("时间格式需要是 HH:mm，例如 09:30。")
             return false
         }
     }
@@ -686,7 +691,7 @@ final class AppModel: ObservableObject {
         guard let conflict = pendingConflict else { return }
         selectedBlockID = conflict.conflictingBlock.id
         pendingConflict = nil
-        lastErrorMessage = "已选中冲突事项「\(conflict.conflictingBlock.title)」，可以在右侧修改它的时间。"
+        lastErrorMessage = trf("已选中冲突事项「%@」，可以在右侧修改它的时间。", conflict.conflictingBlock.title)
     }
 
     func applyPendingConflictSuggestionToSelectedBlock() -> Bool {
@@ -696,7 +701,7 @@ final class AppModel: ObservableObject {
               let suggestedStart = conflict.suggestedStart,
               let suggestedEnd = conflict.suggestedEnd
         else {
-            lastErrorMessage = "当前冲突没有可直接采用的建议时间。"
+            lastErrorMessage = tr("当前冲突没有可直接采用的建议时间。")
             return false
         }
 
@@ -738,7 +743,7 @@ final class AppModel: ObservableObject {
         selectedBlockID = nil
         pendingConflict = nil
         appendSystemLog(eventType: .replanned, payload: ["reason": "应用 AI 草稿"])
-        lastErrorMessage = "已将 AI 草稿应用到 \(selectedDateTitle)。"
+        lastErrorMessage = trf("已将 AI 草稿应用到 %@。", selectedDateTitle)
         saveWorkspace()
         return true
     }
@@ -779,7 +784,7 @@ final class AppModel: ObservableObject {
             ),
             logs: logs
         )
-        lastErrorMessage = "已将 AI 草稿应用到 \(date.displayString)。"
+        lastErrorMessage = trf("已将 AI 草稿应用到 %@。", date.displayString)
         saveWorkspace()
         return true
     }
@@ -795,9 +800,9 @@ final class AppModel: ObservableObject {
               result.issues.isEmpty
         else {
             let firstIssue = result.issues.first?.message.replacingOccurrences(of: "`", with: "")
-            let hint = firstIssue.map { "主要原因：\($0)" }
-                ?? "请调整草稿时间，保证任务都在规划范围内。"
-            lastErrorMessage = "未应用到\(targetDateTitle)：\(expectedTaskCount) 个任务中只有 \(scheduledCount) 个能排进时间表。\(hint)"
+            let hint = firstIssue.map { trf("主要原因：%@", $0) }
+                ?? tr("请调整草稿时间，保证任务都在规划范围内。")
+            lastErrorMessage = trf("未应用到%@：%d 个任务中只有 %d 个能排进时间表。%@", targetDateTitle, expectedTaskCount, scheduledCount, hint)
             return false
         }
         return true
@@ -811,12 +816,36 @@ final class AppModel: ObservableObject {
         (try? secretStore.read(account: "ark-api-key")) ?? ""
     }
 
+    func loadSavedOpenAIAPIKey() -> String {
+        (try? secretStore.read(account: "openai-api-key")) ?? ""
+    }
+
+    func loadSavedGeminiAPIKey() -> String {
+        (try? secretStore.read(account: "gemini-api-key")) ?? ""
+    }
+
+    func loadSavedClaudeAPIKey() -> String {
+        (try? secretStore.read(account: "claude-api-key")) ?? ""
+    }
+
     func saveDeepSeekAPIKey(_ key: String) -> Bool {
         saveAPIKey(key, account: "deepseek-api-key")
     }
 
     func saveArkAPIKey(_ key: String) -> Bool {
         saveAPIKey(key, account: "ark-api-key")
+    }
+
+    func saveOpenAIAPIKey(_ key: String) -> Bool {
+        saveAPIKey(key, account: "openai-api-key")
+    }
+
+    func saveGeminiAPIKey(_ key: String) -> Bool {
+        saveAPIKey(key, account: "gemini-api-key")
+    }
+
+    func saveClaudeAPIKey(_ key: String) -> Bool {
+        saveAPIKey(key, account: "claude-api-key")
     }
 
     private func saveAPIKey(_ key: String, account: String) -> Bool {
@@ -830,7 +859,7 @@ final class AppModel: ObservableObject {
             lastErrorMessage = nil
             return true
         } catch {
-            lastErrorMessage = "保存 API Key 失败：\(error.localizedDescription)"
+            lastErrorMessage = trf("保存 API Key 失败：%@", error.localizedDescription)
             return false
         }
     }
@@ -841,17 +870,25 @@ final class AppModel: ObservableObject {
             settings.deepSeekModel == AppSettings.legacyDefaultDeepSeekModel {
             settings.deepSeekModel = AppSettings.defaultDeepSeekModel
         }
+        settings.arkModel = AppSettings.normalizedModel(settings.arkModel, defaultValue: AppSettings.defaultArkModel)
+        settings.openAIModel = AppSettings.normalizedModel(settings.openAIModel, defaultValue: AppSettings.defaultOpenAIModel)
+        settings.geminiModel = AppSettings.normalizedModel(settings.geminiModel, defaultValue: AppSettings.defaultGeminiModel)
+        settings.claudeModel = AppSettings.normalizedModel(settings.claudeModel, defaultValue: AppSettings.defaultClaudeModel)
         settings.floatingPreviousCount = min(max(settings.floatingPreviousCount, 0), 8)
         settings.floatingNextCount = min(max(settings.floatingNextCount, 0), 8)
         settings.floatingPanelOpacity = min(max(settings.floatingPanelOpacity, 0.0), 1.0)
         settings.advanceReminderMinutes = min(max(settings.advanceReminderMinutes, 0), 60)
+        if aiDrafts.isEmpty && !isAIPlanning {
+            aiStatusMessage = tr("AI 规划待开始。")
+        }
+        refreshNotificationAuthorizationStatus()
         saveWorkspace()
         scheduleNotifications()
     }
 
     func runMockAIPlanning(input: String) {
         isAIPlanning = true
-        aiStatusMessage = "正在使用本地 mock 拆分任务..."
+        aiStatusMessage = tr("正在使用本地 mock 拆分任务...")
         Swift.Task {
             await runAIPlanning(input: input, service: MockPlanningService())
         }
@@ -863,30 +900,9 @@ final class AppModel: ObservableObject {
     }
 
     func runConfiguredAIPlanning(input: String) {
-        let service: any AIPlanningService
-        let providerTitle = settings.aiProvider.title
-        switch settings.aiProvider {
-        case .deepSeek:
-            let apiKey = loadSavedDeepSeekAPIKey()
-            guard !apiKey.isEmpty else {
-                lastErrorMessage = "请先到设置中配置 DeepSeek API Key。"
-                return
-            }
-            service = DeepSeekPlanningService(
-                configuration: DeepSeekConfiguration(apiKey: apiKey, model: settings.deepSeekModel)
-            )
-        case .ark:
-            let apiKey = loadSavedArkAPIKey()
-            guard !apiKey.isEmpty else {
-                lastErrorMessage = "请先到设置中配置火山方舟 API Key。"
-                return
-            }
-            service = ArkPlanningService(
-                configuration: ArkConfiguration(apiKey: apiKey, model: settings.arkModel)
-            )
-        }
+        guard let (service, providerTitle) = configuredAIPlanningService() else { return }
         isAIPlanning = true
-        aiStatusMessage = "正在调用 \(providerTitle) 生成规划建议，请求已发送..."
+        aiStatusMessage = trf("正在调用 %@ 生成规划建议，请求已发送...", providerTitle)
         Swift.Task {
             await runAIPlanning(input: input, service: service, providerTitle: providerTitle, effort: settings.deepSeekEffort)
         }
@@ -898,38 +914,63 @@ final class AppModel: ObservableObject {
     }
 
     func runConfiguredAIReview() {
+        guard let (service, _) = configuredAIPlanningService() else { return }
+        isReviewingWithAI = true
+        Swift.Task {
+            do {
+                let summary = try await service.summarizeDay(
+                    plan: todayPlan,
+                    logs: executionLogs,
+                    outputLanguage: settings.language.aiInstructionName
+                )
+                reviewAISummary = summary
+                isReviewingWithAI = false
+            } catch {
+                lastErrorMessage = self.trf("AI 复盘失败：%@", error.localizedDescription)
+                isReviewingWithAI = false
+            }
+        }
+    }
+
+    private func configuredAIPlanningService() -> ((any AIPlanningService), String)? {
+        let providerTitle = settings.aiProvider.localizedTitle(effectiveLanguage)
+        let apiKey: String
         let service: any AIPlanningService
+
         switch settings.aiProvider {
         case .deepSeek:
-            let apiKey = loadSavedDeepSeekAPIKey()
-            guard !apiKey.isEmpty else {
-                lastErrorMessage = "请先到设置中配置 DeepSeek API Key。"
-                return
-            }
+            apiKey = loadSavedDeepSeekAPIKey()
             service = DeepSeekPlanningService(
                 configuration: DeepSeekConfiguration(apiKey: apiKey, model: settings.deepSeekModel)
             )
         case .ark:
-            let apiKey = loadSavedArkAPIKey()
-            guard !apiKey.isEmpty else {
-                lastErrorMessage = "请先到设置中配置火山方舟 API Key。"
-                return
-            }
+            apiKey = loadSavedArkAPIKey()
             service = ArkPlanningService(
                 configuration: ArkConfiguration(apiKey: apiKey, model: settings.arkModel)
             )
+        case .openAI:
+            apiKey = loadSavedOpenAIAPIKey()
+            service = OpenAIPlanningService(
+                configuration: OpenAIConfiguration(apiKey: apiKey, model: settings.openAIModel)
+            )
+        case .gemini:
+            apiKey = loadSavedGeminiAPIKey()
+            service = GeminiPlanningService(
+                configuration: GeminiConfiguration(apiKey: apiKey, model: settings.geminiModel)
+            )
+        case .claude:
+            apiKey = loadSavedClaudeAPIKey()
+            service = ClaudePlanningService(
+                configuration: ClaudeConfiguration(apiKey: apiKey, model: settings.claudeModel)
+            )
         }
-        isReviewingWithAI = true
-        Swift.Task {
-            do {
-                let summary = try await service.summarizeDay(plan: todayPlan, logs: executionLogs)
-                reviewAISummary = summary
-                isReviewingWithAI = false
-            } catch {
-                lastErrorMessage = "AI 复盘失败：\(error.localizedDescription)"
-                isReviewingWithAI = false
-            }
+
+        guard !apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            lastErrorMessage = trf("请先到设置中配置 %@ API Key。", providerTitle)
+            return nil
         }
+
+        return (service, providerTitle)
     }
 
     func resetDemoPlan() {
@@ -975,7 +1016,7 @@ final class AppModel: ObservableObject {
             logs: []
         )
         saveWorkspace()
-        lastErrorMessage = "已复制到 \(targetDate.displayString)。"
+        lastErrorMessage = trf("已复制到 %@。", targetDate.displayString)
     }
 
     func nearbyBlocksForFloatingPanel() -> [TimeBlock] {
@@ -1023,12 +1064,12 @@ final class AppModel: ObservableObject {
             let elapsed = Date().timeIntervalSince(startedAt)
             aiDrafts = drafts
             aiQuestions = []
-            aiStatusMessage = "\(providerTitle) 已生成 \(drafts.count) 个规划建议，用时 \(Self.durationText(elapsed))。"
+            aiStatusMessage = trf("%@ 已生成 %d 个规划建议，用时 %@。", providerTitle, drafts.count, localizedDurationText(elapsed))
             isAIPlanning = false
         } catch {
             let elapsed = Date().timeIntervalSince(startedAt)
-            aiStatusMessage = "AI 规划失败。"
-            lastErrorMessage = "AI 规划失败，用时 \(Self.durationText(elapsed))：\(error.localizedDescription)"
+            aiStatusMessage = tr("AI 规划失败。")
+            lastErrorMessage = trf("AI 规划失败，用时 %@：%@", localizedDurationText(elapsed), error.localizedDescription)
             isAIPlanning = false
         }
     }
@@ -1406,20 +1447,20 @@ final class AppModel: ObservableObject {
     private func updateNotificationAuthorizationStatus(_ status: UNAuthorizationStatus) {
         switch status {
         case .notDetermined:
-            notificationAuthorizationStatus = "未申请"
-            notificationAuthorizationHelp = "点击“申请系统通知权限”，macOS 会弹出授权确认。"
+            notificationAuthorizationStatus = tr("未申请")
+            notificationAuthorizationHelp = tr("点击“申请系统通知权限”，macOS 会弹出授权确认。")
         case .denied:
-            notificationAuthorizationStatus = "已拒绝"
-            notificationAuthorizationHelp = "请到 macOS 系统设置 > 通知 > EfficientTime，允许通知、横幅和声音。"
+            notificationAuthorizationStatus = tr("已拒绝")
+            notificationAuthorizationHelp = tr("请到 macOS 系统设置 > 通知 > EfficientTime，允许通知、横幅和声音。")
         case .authorized:
-            notificationAuthorizationStatus = "已允许"
-            notificationAuthorizationHelp = "系统通知已开启；如果看不到横幅，请检查专注模式和通知样式。"
+            notificationAuthorizationStatus = tr("已允许")
+            notificationAuthorizationHelp = tr("系统通知已开启；如果看不到横幅，请检查专注模式和通知样式。")
         case .provisional:
-            notificationAuthorizationStatus = "临时允许"
-            notificationAuthorizationHelp = "系统允许静默通知；建议在 macOS 通知设置里改为允许横幅。"
+            notificationAuthorizationStatus = tr("临时允许")
+            notificationAuthorizationHelp = tr("系统允许静默通知；建议在 macOS 通知设置里改为允许横幅。")
         default:
-            notificationAuthorizationStatus = "未知"
-            notificationAuthorizationHelp = "macOS 返回了未识别的通知状态，请尝试重新申请权限或从 .app 启动。"
+            notificationAuthorizationStatus = tr("未知")
+            notificationAuthorizationHelp = tr("macOS 返回了未识别的通知状态，请尝试重新申请权限或从 .app 启动。")
         }
     }
 
@@ -1458,10 +1499,10 @@ final class AppModel: ObservableObject {
                     id: "runtime-start-\(plan.date.displayString)-\(block.id.uuidString)",
                     date: plan.date,
                     blockId: block.id,
-                    kind: "开始提醒",
+                    kind: tr("开始提醒"),
                     panelKind: .start,
-                    title: "开始：\(block.title)",
-                    body: "当前任务开始了，\(block.start.displayString)-\(block.end.displayString)"
+                    title: trf("开始：%@", block.title),
+                    body: trf("当前任务开始了，%@-%@", block.start.displayString, block.end.displayString)
                 )
             }
 
@@ -1471,10 +1512,10 @@ final class AppModel: ObservableObject {
                     id: "runtime-end-\(plan.date.displayString)-\(block.id.uuidString)",
                     date: plan.date,
                     blockId: block.id,
-                    kind: "结束提醒",
+                    kind: tr("结束提醒"),
                     panelKind: .end,
-                    title: "结束：\(block.title)",
-                    body: "当前任务到结束时间了，请标记完成或跳过"
+                    title: trf("结束：%@", block.title),
+                    body: tr("当前任务到结束时间了，请标记完成或跳过")
                 )
             }
         }
@@ -1500,7 +1541,7 @@ final class AppModel: ObservableObject {
         ) { [weak self] error in
             guard let error else { return }
             Swift.Task { @MainActor in
-                self?.lastErrorMessage = "系统通知发送失败：\(error.localizedDescription)。已显示 EfficientTime 置顶提醒。"
+                self?.lastErrorMessage = self?.trf("系统通知发送失败：%@。已显示 EfficientTime 置顶提醒。", error.localizedDescription)
             }
         }
         saveWorkspace()
@@ -1615,11 +1656,15 @@ final class AppModel: ObservableObject {
         !workspace.tasks.isEmpty || !workspace.plan.blocks.isEmpty || !workspace.logs.isEmpty
     }
 
-    private static func durationText(_ interval: TimeInterval) -> String {
+    private func localizedDurationText(_ interval: TimeInterval) -> String {
         if interval < 10 {
-            return String(format: "%.1f 秒", interval)
+            return String(
+                format: tr("%.1f 秒"),
+                locale: Locale(identifier: effectiveLanguage.localeIdentifier),
+                interval
+            )
         }
-        return "\(Int(interval.rounded())) 秒"
+        return AppLocalization.duration(seconds: Int(interval.rounded()), language: effectiveLanguage)
     }
 
     private static func sampleTasks(defaultSchedule: AIPlanningDefaultSchedule) -> [EfficientTimeCore.Task] {

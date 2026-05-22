@@ -48,7 +48,7 @@ public struct MockPlanningService: AIPlanningService {
         )
     }
 
-    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog]) async throws -> String {
+    public func summarizeDay(plan: DayPlan, logs: [ExecutionLog], outputLanguage: String = "Simplified Chinese") async throws -> String {
         let doneCount = plan.blocks.filter { $0.status == .done }.count
         return "今天完成 \(doneCount)/\(plan.blocks.count) 个时间块，记录事件 \(logs.count) 条。"
     }

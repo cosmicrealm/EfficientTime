@@ -24,15 +24,15 @@ struct DayTimelineView: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(model.selectedDateTitle)时间表")
+                Text(model.trf("%@时间表", model.selectedDateTitle))
                     .font(.title2)
                     .fontWeight(.semibold)
                 HStack(spacing: 8) {
-                    Text("完成 \(model.completedCount)/\(model.visiblePlanBlocks.count) · \(model.availableWindowsText)")
+                    Text(model.trf("完成 %d/%d · %@", model.completedCount, model.visiblePlanBlocks.count, model.availableWindowsText))
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
-                    Text(model.todayPlan.status.title)
+                    Text(model.planStatusTitle(model.todayPlan.status))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -46,7 +46,7 @@ struct DayTimelineView: View {
             Button {
                 model.startDay()
             } label: {
-                Label("开始执行", systemImage: "play.circle")
+                Label(model.tr("开始执行"), systemImage: "play.circle")
             }
             .buttonStyle(.borderedProminent)
             .tint(model.settings.accentColor)
@@ -75,7 +75,7 @@ struct DayTimelineView: View {
                     Text(block.title)
                         .font(.headline)
                     Spacer()
-                    Text(block.status.title)
+                    Text(model.statusTitle(block.status))
                         .font(.caption)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -83,7 +83,7 @@ struct DayTimelineView: View {
                         .background(block.status.softBackground)
                         .clipShape(Capsule())
                 }
-                Text("\(block.durationMinutes) 分钟")
+                Text(model.minutesText(block.durationMinutes))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -104,20 +104,20 @@ struct DayTimelineView: View {
             Button {
                 model.markBlockDone(block.id)
             } label: {
-                Label("完成", systemImage: "checkmark.circle")
+                Label(model.tr("完成"), systemImage: "checkmark.circle")
             }
 
             Button {
                 model.skipBlock(block.id)
             } label: {
-                Label(block.status == .skipped ? "取消跳过" : "跳过", systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
+                Label(block.status == .skipped ? model.tr("取消跳过") : model.tr("跳过"), systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
             }
             .disabled(block.status == .done)
 
             Button {
                 model.delayBlock(block.id)
             } label: {
-                Label(block.status == .delayed ? "取消推迟" : "推迟 20 分钟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
+                Label(block.status == .delayed ? model.tr("取消推迟") : model.tr("推迟 20 分钟"), systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
             }
             .disabled(block.status == .done)
 
@@ -126,7 +126,7 @@ struct DayTimelineView: View {
             Button(role: .destructive) {
                 model.deleteBlock(block.id)
             } label: {
-                Label("删除", systemImage: "trash")
+                Label(model.tr("删除"), systemImage: "trash")
             }
         }
     }

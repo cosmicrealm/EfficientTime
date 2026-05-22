@@ -10,7 +10,7 @@ struct QuickAddTaskView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("快速添加", systemImage: "plus.circle.fill")
+                Label(model.tr("快速添加"), systemImage: "plus.circle.fill")
                     .font(.headline)
                 Spacer()
                 Text(model.selectedDateTitle)
@@ -18,13 +18,13 @@ struct QuickAddTaskView: View {
                     .foregroundStyle(.secondary)
             }
 
-            TextField("任务名称", text: $title)
+            TextField(model.tr("任务名称"), text: $title)
                 .textFieldStyle(.roundedBorder)
 
             HStack {
-                TextField("开始 默认 \(planningDefaultStartText)", text: $startText)
+                TextField(model.trf("开始 默认 %@", planningDefaultStartText), text: $startText)
                     .textFieldStyle(.roundedBorder)
-                TextField("结束 默认 +90 分钟", text: $endText)
+                TextField(model.tr("结束 默认 +90 分钟"), text: $endText)
                     .textFieldStyle(.roundedBorder)
             }
 
@@ -36,7 +36,7 @@ struct QuickAddTaskView: View {
                     endText = ""
                 }
             } label: {
-                Label("添加", systemImage: "plus.circle")
+                Label(model.tr("添加"), systemImage: "plus.circle")
             }
             .buttonStyle(.borderedProminent)
             .disabled(title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -60,21 +60,21 @@ struct QuickAddTaskView: View {
 
     private func conflictPanel(_ conflict: ScheduleConflict) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("时间冲突")
+            Text(model.tr("时间冲突"))
                 .font(.subheadline)
                 .fontWeight(.semibold)
-            Text("新事项「\(conflict.proposedTitle)」\(conflict.proposedStart.displayString)-\(conflict.proposedEnd.displayString) 与「\(conflict.conflictingBlock.title)」\(conflict.conflictingBlock.start.displayString)-\(conflict.conflictingBlock.end.displayString) 重叠。")
+            Text(model.trf("新事项「%@」%@-%@ 与「%@」%@-%@ 重叠。", conflict.proposedTitle, conflict.proposedStart.displayString, conflict.proposedEnd.displayString, conflict.conflictingBlock.title, conflict.conflictingBlock.start.displayString, conflict.conflictingBlock.end.displayString))
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let suggestion = conflict.suggestedWindow {
-                Text("建议改到 \(suggestion.start.displayString)-\(suggestion.end.displayString)，保持原任务时长并避开已有安排。")
+                Text(model.trf("建议改到 %@-%@，保持原任务时长并避开已有安排。", suggestion.start.displayString, suggestion.end.displayString))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
-                Text("当前可用时间段内没有找到同等时长的连续空档，可以缩短任务或调整可用时间段。")
+                Text(model.tr("当前可用时间段内没有找到同等时长的连续空档，可以缩短任务或调整可用时间段。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -83,7 +83,7 @@ struct QuickAddTaskView: View {
             HStack {
                 if let suggestion = conflict.suggestedWindow,
                    conflict.editedBlockID == nil {
-                    Button("按建议时间添加") {
+                    Button(model.tr("按建议时间添加")) {
                         startText = suggestion.start.displayString
                         endText = suggestion.end.displayString
                         let added = model.addScheduledTask(title: title, startText: startText, endText: endText)
@@ -94,12 +94,12 @@ struct QuickAddTaskView: View {
                         }
                     }
                 }
-                Button("修改新事项时间") {
+                Button(model.tr("修改新事项时间")) {
                     startText = conflict.proposedStart.displayString
                     endText = conflict.proposedEnd.displayString
                     model.clearPendingConflict()
                 }
-                Button("去改冲突事项") {
+                Button(model.tr("去改冲突事项")) {
                     model.selectPendingConflictBlock()
                 }
             }

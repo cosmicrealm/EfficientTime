@@ -75,7 +75,7 @@ struct FloatingPanelView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help("显示或隐藏主窗口")
+            .help(model.tr("显示或隐藏主窗口"))
 
             Image(systemName: "chevron.up")
                 .font(.system(size: 11, weight: .semibold))
@@ -83,7 +83,7 @@ struct FloatingPanelView: View {
                 .frame(width: 22, height: 22)
         }
         .padding(.horizontal, 12)
-        .help("点击展开")
+        .help(model.tr("点击展开"))
     }
 
     private var panelBeacon: some View {
@@ -95,7 +95,7 @@ struct FloatingPanelView: View {
                     .stroke(Color.white.opacity(0.92), lineWidth: 1.4)
             }
             .shadow(color: Color.red.opacity(0.48), radius: 5, y: 1)
-            .accessibilityLabel("悬浮窗位置标识")
+            .accessibilityLabel(model.tr("悬浮窗位置标识"))
     }
 
     private var panelSurfaceOpacity: Double {
@@ -119,12 +119,12 @@ struct FloatingPanelView: View {
     private var nearbyTasksPanel: some View {
         VStack(alignment: .leading, spacing: 9) {
             HStack {
-                Label("附近任务", systemImage: "list.bullet.rectangle")
+                Label(model.tr("附近任务"), systemImage: "list.bullet.rectangle")
                     .font(.system(size: 13, weight: .semibold))
                     .fontWeight(.semibold)
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text("\(model.nearbyBlocksForFloatingPanel().count) 项")
+                Text(model.itemCountText(model.nearbyBlocksForFloatingPanel().count))
                     .font(.system(size: 11, weight: .medium, design: .rounded))
                     .foregroundStyle(.secondary)
             }
@@ -159,7 +159,7 @@ struct FloatingPanelView: View {
                     Circle()
                         .fill(countdownProgressColor)
                         .frame(width: 8, height: 8)
-                    Text("实时执行")
+                    Text(model.tr("实时执行"))
                         .font(.system(size: 13, weight: .bold))
                     Text(currentClockText)
                         .font(.system(size: 12, weight: .semibold, design: .monospaced))
@@ -170,7 +170,7 @@ struct FloatingPanelView: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .help("点击顶部空白区域折叠")
+            .help(model.tr("点击顶部空白区域折叠"))
 
             opacityControl
                 .frame(width: 174)
@@ -183,7 +183,7 @@ struct FloatingPanelView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help("显示或隐藏主窗口")
+            .help(model.tr("显示或隐藏主窗口"))
 
             Button {
                 model.toggleFloatingPanelSize()
@@ -193,7 +193,7 @@ struct FloatingPanelView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help("折叠悬浮窗")
+            .help(model.tr("折叠悬浮窗"))
         }
         .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
     }
@@ -261,7 +261,7 @@ struct FloatingPanelView: View {
                     model.markBlockDone(block.id)
                 }
             } label: {
-                Label(block.status == .done ? "取消完成" : "完成", systemImage: block.status == .done ? "arrow.uturn.backward.circle" : "checkmark.circle")
+                Label(block.status == .done ? model.tr("取消完成") : model.tr("完成"), systemImage: block.status == .done ? "arrow.uturn.backward.circle" : "checkmark.circle")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -270,7 +270,7 @@ struct FloatingPanelView: View {
             Button {
                 model.skipBlock(block.id)
             } label: {
-                Label(block.status == .skipped ? "取消跳过" : "跳过", systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
+                Label(block.status == .skipped ? model.tr("取消跳过") : model.tr("跳过"), systemImage: block.status == .skipped ? "arrow.uturn.backward.circle" : "forward.end")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -279,7 +279,7 @@ struct FloatingPanelView: View {
             Button {
                 model.delayBlock(block.id)
             } label: {
-                Label(block.status == .delayed ? "取消推迟" : "推迟 20 分钟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
+                Label(block.status == .delayed ? model.tr("取消推迟") : model.tr("推迟 20 分钟"), systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -292,7 +292,7 @@ struct FloatingPanelView: View {
 
     private var simultaneousTasksSummary: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Label("同时进行 \(model.currentBlocks.count) 项", systemImage: "rectangle.stack.badge.play")
+            Label(model.trf("同时进行 %d 项", model.currentBlocks.count), systemImage: "rectangle.stack.badge.play")
                 .font(.caption)
                 .fontWeight(.semibold)
                 .foregroundStyle(model.settings.accentColor)
@@ -323,7 +323,7 @@ struct FloatingPanelView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
 
-            Text("透明")
+            Text(model.tr("透明"))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
 
@@ -346,7 +346,7 @@ struct FloatingPanelView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(Color.white.opacity(0.22), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-        .help("调整悬浮窗透明度")
+        .help(model.tr("调整悬浮窗透明度"))
     }
 
     private func taskRow(_ block: TimeBlock) -> some View {
@@ -367,7 +367,7 @@ struct FloatingPanelView: View {
                     .font(.system(size: isCurrent ? 13 : 12, weight: isCurrent ? .semibold : .regular))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                Text(block.status.title)
+                Text(model.statusTitle(block.status))
                     .font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
@@ -387,7 +387,7 @@ struct FloatingPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(block.status == .done ? .secondary : model.settings.accentColor)
-                .help(block.status == .done ? "改回待开始" : "标记完成")
+                .help(block.status == .done ? model.tr("改回待开始") : model.tr("标记完成"))
 
                 Button {
                     model.skipBlock(block.id)
@@ -398,7 +398,7 @@ struct FloatingPanelView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(block.status == .skipped ? model.settings.accentColor : .secondary)
                 .disabled(block.status == .done)
-                .help(block.status == .skipped ? "取消跳过" : "跳过")
+                .help(block.status == .skipped ? model.tr("取消跳过") : model.tr("跳过"))
 
                 Button {
                     model.delayBlock(block.id)
@@ -409,7 +409,7 @@ struct FloatingPanelView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(block.status == .delayed ? model.settings.accentColor : .orange)
                 .disabled(block.status == .done)
-                .help(block.status == .delayed ? "取消推迟并整体回退 20 分钟" : "整体顺延 20 分钟")
+                .help(block.status == .delayed ? model.tr("取消推迟并整体回退 20 分钟") : model.tr("整体顺延 20 分钟"))
             }
             .font(.system(size: 15, weight: .semibold))
         }
@@ -427,7 +427,7 @@ struct FloatingPanelView: View {
         .onTapGesture {
             model.selectBlock(block)
         }
-        .help("点击选中，或直接完成、跳过、推迟")
+        .help(model.tr("点击选中，或直接完成、跳过、推迟"))
     }
 
     private func compactTaskRow(_ block: TimeBlock) -> some View {
@@ -443,7 +443,7 @@ struct FloatingPanelView: View {
                     .font(.system(size: isCurrent ? 14 : 13, weight: isCurrent ? .semibold : .regular))
                     .foregroundStyle(.primary)
                     .lineLimit(1)
-                Text("\(block.start.displayString)-\(block.end.displayString) · \(block.status.title)")
+                Text("\(block.start.displayString)-\(block.end.displayString) · \(model.statusTitle(block.status))")
                     .font(.system(size: 11, design: .rounded))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
@@ -465,7 +465,7 @@ struct FloatingPanelView: View {
         .onTapGesture {
             model.selectBlock(block)
         }
-        .help("点击选中任务")
+        .help(model.tr("点击选中任务"))
     }
 
     private func rowBackground(for block: TimeBlock, isCurrent: Bool) -> Color {
@@ -524,7 +524,7 @@ struct FloatingPanelView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
-                .help("显示或隐藏主窗口")
+                .help(model.tr("显示或隐藏主窗口"))
 
                 Image(systemName: "chevron.down")
                     .font(.system(size: 12, weight: .semibold))
@@ -554,7 +554,7 @@ struct FloatingPanelView: View {
         .onTapGesture {
             model.toggleFloatingPanelSize()
         }
-        .help("点击顶部折叠")
+        .help(model.tr("点击顶部折叠"))
     }
 
     private func countdownBadge(size: CGFloat, isCompact: Bool) -> some View {
@@ -648,21 +648,21 @@ struct FloatingPanelView: View {
 
     private var floatingTaskTitle: String {
         if model.currentBlocks.count > 1, let first = model.currentBlocks.first {
-            return "\(first.title) 等 \(model.currentBlocks.count) 项"
+            return model.trf("%@ 等 %d 项", first.title, model.currentBlocks.count)
         }
-        return focusedBlock?.title ?? "没有事项"
+        return focusedBlock?.title ?? model.tr("没有事项")
     }
 
     private var floatingTaskSubtitle: String {
         if let block = model.currentBlock,
            let remainingSeconds = currentRemainingSeconds {
-            return "\(block.start.displayString)-\(block.end.displayString) · 剩余 \(durationText(remainingSeconds))"
+            return "\(block.start.displayString)-\(block.end.displayString) · \(model.tr("剩余")) \(durationText(remainingSeconds))"
         }
         if let next = model.nextBlock,
            let startsInSeconds = nextStartsInSeconds {
-            return "\(next.start.displayString)-\(next.end.displayString) · \(durationText(startsInSeconds)) 后开始"
+            return "\(next.start.displayString)-\(next.end.displayString) · \(durationText(startsInSeconds)) \(model.tr("后开始"))"
         }
-        return "今天已结束"
+        return model.tr("今天已结束")
     }
 
     private var countdownPrimaryText: String {
@@ -679,12 +679,12 @@ struct FloatingPanelView: View {
 
     private var countdownSecondaryText: String {
         if model.currentBlock != nil {
-            return "剩余"
+            return model.tr("剩余")
         }
         if model.nextBlock != nil {
-            return "后开始"
+            return model.tr("后开始")
         }
-        return "完成"
+        return model.tr("完成")
     }
 
     private var countdownProgress: Double {
@@ -788,15 +788,15 @@ struct FloatingPanelView: View {
 
     private var floatingStatusText: String {
         if model.currentBlocks.count > 1 {
-            return "进行中 · \(model.currentBlocks.count)项"
+            return model.trf("进行中 · %d项", model.currentBlocks.count)
         }
         if model.currentBlock != nil {
-            return "进行中"
+            return model.tr("进行中")
         }
         if model.nextBlock != nil {
-            return "下一项"
+            return model.tr("下一项")
         }
-        return "已完成"
+        return model.tr("已完成")
     }
 
     private var progressPercentText: String {
@@ -857,27 +857,11 @@ struct FloatingPanelView: View {
     }
 
     private func durationText(_ seconds: Int) -> String {
-        if seconds >= 3600 {
-            let hours = seconds / 3600
-            let minutes = (seconds % 3600) / 60
-            if minutes == 0 {
-                return "\(hours) 小时"
-            }
-            return "\(hours) 小时 \(minutes) 分钟"
-        }
-        if seconds >= 60 {
-            let minutes = seconds / 60
-            let remainingSeconds = seconds % 60
-            if remainingSeconds == 0 {
-                return "\(minutes) 分钟"
-            }
-            return "\(minutes) 分 \(remainingSeconds) 秒"
-        }
-        return "\(seconds) 秒"
+        return model.durationText(seconds: seconds)
     }
 
     private var timelineTargetSkipTitle: String {
-        model.timelineActionTargetBlock?.status == .skipped ? "取消跳过" : "跳过"
+        model.timelineActionTargetBlock?.status == .skipped ? model.tr("取消跳过") : model.tr("跳过")
     }
 
     private var timelineTargetSkipIcon: String {
@@ -885,7 +869,7 @@ struct FloatingPanelView: View {
     }
 
     private var timelineTargetDelayTitle: String {
-        model.timelineActionTargetBlock?.status == .delayed ? "取消推迟" : "推迟 20 分钟"
+        model.timelineActionTargetBlock?.status == .delayed ? model.tr("取消推迟") : model.tr("推迟 20 分钟")
     }
 
     private var timelineTargetDelayIcon: String {

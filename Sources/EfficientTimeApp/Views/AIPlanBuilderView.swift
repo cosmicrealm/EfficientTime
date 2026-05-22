@@ -32,6 +32,7 @@ struct AIPlanBuilderView: View {
         }
         .background(model.settings.pageBackground)
         .onAppear {
+            speechRecorder.setLanguage(model.settings.language)
             syncPlanningWindowDefaults()
             applyTargetDate = model.selectedDate
             applyVisibleMonth = monthStart(for: model.selectedDate)
@@ -49,15 +50,18 @@ struct AIPlanBuilderView: View {
             applyTargetDate = model.selectedDate
             applyVisibleMonth = monthStart(for: model.selectedDate)
         }
+        .onChange(of: model.settings.language) { _, newValue in
+            speechRecorder.setLanguage(newValue)
+        }
     }
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("智能规划")
+                Text(model.tr("智能规划"))
                     .font(.title2)
                     .fontWeight(.semibold)
-                Text("\(model.settings.aiProvider.title) · \(model.selectedDateTitle)")
+                Text("\(model.settings.aiProvider.localizedTitle(model.effectiveLanguage)) · \(model.selectedDateTitle)")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -79,7 +83,7 @@ struct AIPlanBuilderView: View {
     private var inputPanel: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack {
-                Text("原始计划")
+                Text(model.tr("原始计划"))
                     .font(.headline)
                 Spacer()
                 Button {
@@ -87,29 +91,29 @@ struct AIPlanBuilderView: View {
                         appendTranscriptToInput(transcript)
                     }
                 } label: {
-                    Label(speechRecorder.isRecording ? "停止录入" : "语音录入", systemImage: speechRecorder.isRecording ? "stop.circle.fill" : "mic.circle")
+                    Label(speechRecorder.isRecording ? model.tr("停止录入") : model.tr("语音录入"), systemImage: speechRecorder.isRecording ? "stop.circle.fill" : "mic.circle")
                 }
                 .buttonStyle(.bordered)
                 .controlSize(.small)
                 .tint(speechRecorder.isRecording ? .red : model.settings.accentColor)
-                .help(speechRecorder.isRecording ? "停止录音并写入文本" : "使用系统语音识别录入计划")
+                .help(speechRecorder.isRecording ? model.tr("停止录音并写入文本") : model.tr("使用系统语音识别录入计划"))
 
                 Button {
                     input = ""
                 } label: {
-                    Label("清空", systemImage: "xmark.circle")
+                    Label(model.tr("清空"), systemImage: "xmark.circle")
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.plain)
                 .disabled(input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                .help("清空输入")
+                .help(model.tr("清空输入"))
             }
 
             compactPlanningControls
 
             planEditor
 
-            if speechRecorder.isRecording || speechRecorder.statusText != "语音输入待开始。" {
+            if speechRecorder.isRecording || speechRecorder.statusText != model.tr("语音输入待开始。") {
                 Label(speechRecorder.statusText, systemImage: speechRecorder.isRecording ? "waveform" : "text.bubble")
                     .font(.caption)
                     .foregroundStyle(speechRecorder.isRecording ? model.settings.accentColor : .secondary)
@@ -120,7 +124,7 @@ struct AIPlanBuilderView: View {
             Button {
                 model.runConfiguredAIPlanning(input: planningInput)
             } label: {
-                Label("生成分时段日程", systemImage: "sparkles")
+                Label(model.tr("生成分时段日程"), systemImage: "sparkles")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
@@ -149,7 +153,7 @@ struct AIPlanBuilderView: View {
                 .padding(8)
 
             if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                Text("把今天要做的事直接粘进来，例如：\n09:30 看股票账户 20 分钟\n读论文综述，大概 1 小时\n写项目代码\n晚上复盘")
+                Text(model.tr("把今天要做的事直接粘进来，例如：\n09:30 看股票账户 20 分钟\n读论文综述，大概 1 小时\n写项目代码\n晚上复盘"))
                     .foregroundStyle(.secondary)
                     .padding(.horizontal, 14)
                     .padding(.vertical, 16)
@@ -175,18 +179,18 @@ struct AIPlanBuilderView: View {
 
     private var compactPlanningControls: some View {
         HStack(spacing: 8) {
-            Label("规划", systemImage: "clock")
+            Label(model.tr("规划"), systemImage: "clock")
                 .foregroundStyle(.secondary)
 
-            TextField("开始", text: $planningStartText)
+            TextField(model.tr("开始"), text: $planningStartText)
                 .frame(width: 58)
                 .textFieldStyle(.roundedBorder)
                 .monospacedDigit()
 
-            Text("到")
+            Text(model.tr("到"))
                 .foregroundStyle(.secondary)
 
-            TextField("结束", text: $planningEndText)
+            TextField(model.tr("结束"), text: $planningEndText)
                 .frame(width: 58)
                 .textFieldStyle(.roundedBorder)
                 .monospacedDigit()
@@ -194,14 +198,14 @@ struct AIPlanBuilderView: View {
             Divider()
                 .frame(height: 16)
 
-            Label("间隔", systemImage: "timer")
+            Label(model.tr("间隔"), systemImage: "timer")
                 .foregroundStyle(.secondary)
 
             TextField("10", text: $breakMinutesText)
                 .frame(width: 54)
                 .textFieldStyle(.roundedBorder)
 
-            Text("分钟")
+            Text(model.tr("分钟"))
                 .foregroundStyle(.secondary)
 
             Spacer()
@@ -217,7 +221,7 @@ struct AIPlanBuilderView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("日程草稿")
+                    Text(model.tr("日程草稿"))
                         .font(.headline)
                     Text(suggestionSummary)
                         .font(.caption)
@@ -229,7 +233,7 @@ struct AIPlanBuilderView: View {
                 Button {
                     addDraftRow()
                 } label: {
-                    Label("添加", systemImage: "plus")
+                    Label(model.tr("添加"), systemImage: "plus")
                 }
                 .disabled(model.isAIPlanning)
 
@@ -238,7 +242,7 @@ struct AIPlanBuilderView: View {
                 Button {
                     applyDrafts(to: applyTargetDate, title: title(for: applyTargetDate))
                 } label: {
-                    Label("应用", systemImage: "calendar.badge.checkmark")
+                    Label(model.tr("应用"), systemImage: "calendar.badge.checkmark")
                 }
                 .buttonStyle(.borderedProminent)
                 .tint(model.settings.accentColor)
@@ -289,19 +293,19 @@ struct AIPlanBuilderView: View {
             applyVisibleMonth = monthStart(for: applyTargetDate)
             isApplyCalendarPresented.toggle()
         } label: {
-            Label("目标：\(title(for: applyTargetDate))", systemImage: "calendar")
+            Label(model.trf("目标：%@", title(for: applyTargetDate)), systemImage: "calendar")
         }
         .buttonStyle(.bordered)
         .popover(isPresented: $isApplyCalendarPresented, arrowEdge: .bottom) {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    Text("应用目标日期")
+                    Text(model.tr("应用目标日期"))
                         .font(.headline)
                     Spacer()
-                    Button("今天") {
+                    Button(model.tr("今天")) {
                         selectApplyTarget(LocalDate.today())
                     }
-                    Button("明天") {
+                    Button(model.tr("明天")) {
                         selectApplyTarget(LocalDate.today().adding(days: 1))
                     }
                 }
@@ -325,9 +329,9 @@ struct AIPlanBuilderView: View {
             Image(systemName: "calendar.badge.clock")
                 .font(.system(size: 32))
                 .foregroundStyle(model.settings.accentColor)
-            Text("等待生成")
+            Text(model.tr("等待生成"))
                 .font(.headline)
-            Text("左侧输入计划后会在这里变成可编辑时间轴。")
+            Text(model.tr("左侧输入计划后会在这里变成可编辑时间轴。"))
                 .font(.caption)
                 .foregroundStyle(.secondary)
         }
@@ -341,21 +345,21 @@ struct AIPlanBuilderView: View {
         return HStack(alignment: .center, spacing: 10) {
             VStack(alignment: .leading, spacing: 4) {
                 labeledTextField(
-                    "Start",
+                    model.tr("Start"),
                     text: startBinding(for: draft.id, fallback: edit.startText),
                     width: 58,
                     alignment: .trailing,
                     monospaced: true
                 )
                 labeledTextField(
-                    "End",
+                    model.tr("End"),
                     text: endBinding(for: draft.id, fallback: edit.endText),
                     width: 58,
                     alignment: .trailing,
                     monospaced: true
                 )
                 labeledTextField(
-                    "时长",
+                    model.tr("时长"),
                     text: durationBinding(for: draft.id, fallback: edit.durationText),
                     width: 58,
                     alignment: .trailing,
@@ -375,11 +379,11 @@ struct AIPlanBuilderView: View {
             .frame(width: 14, height: 70)
 
             VStack(alignment: .leading, spacing: 4) {
-                TextField("任务名称", text: titleBinding(for: draft.id, fallback: edit.titleText))
+                TextField(model.tr("任务名称"), text: titleBinding(for: draft.id, fallback: edit.titleText))
                     .font(.system(size: 14, weight: .semibold))
                     .textFieldStyle(.roundedBorder)
 
-                TextField("内容说明", text: notesBinding(for: draft.id, fallback: edit.notesText), axis: .vertical)
+                TextField(model.tr("内容说明"), text: notesBinding(for: draft.id, fallback: edit.notesText), axis: .vertical)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .textFieldStyle(.roundedBorder)
@@ -396,7 +400,7 @@ struct AIPlanBuilderView: View {
             }
             .buttonStyle(.plain)
             .foregroundStyle(.secondary)
-            .help("删除这条草稿")
+            .help(model.tr("删除这条草稿"))
         }
         .padding(.vertical, 6)
         .contentShape(Rectangle())
@@ -408,6 +412,7 @@ struct AIPlanBuilderView: View {
 
         规划要求：
         - 默认按照用户输入的任务顺序安排。
+        - 所有自然语言输出必须使用 \(model.effectiveLanguage.aiInstructionName)。
         - 默认规划范围是 \(planningDefaults.windowDescription)，不要把未指定时间的任务安排到这个范围之外。
         - 默认固定休息：\(planningDefaults.breakDescription)。这些时段只作为避让约束；除非我明确写了吃饭或休息任务，否则不要额外生成休息任务。
         - 未指定时间的工作任务不要占用默认休息时段。
@@ -417,7 +422,7 @@ struct AIPlanBuilderView: View {
         - 每个任务都需要包含任务名称、内容说明、开始时间、预计耗时和结束时间。
         - 如果我没有写开始时间，请根据任务内容和顺序在 \(planningDefaults.windowDescription) 内评估一个建议开始时间。
         - 如果我没有写大概需要多久，请根据任务类型自己评估一个合理耗时。
-        - 信息不足时请合理估算，并把关键估算依据用一句中文写入 assumptions，不要向我反问。
+        - 信息不足时请合理估算，并把关键估算依据用一句 \(model.effectiveLanguage.aiInstructionName) 写入 assumptions，不要向我反问。
         """
     }
 
@@ -434,7 +439,7 @@ struct AIPlanBuilderView: View {
             guard let edit = suggestionEdits[draft.id] else { return true }
             return trimmedTitle(for: edit).isEmpty
         }) {
-            return "草稿里有任务名称为空，请先补全名称。"
+            return model.tr("草稿里有任务名称为空，请先补全名称。")
         }
 
         return nil
@@ -444,7 +449,7 @@ struct AIPlanBuilderView: View {
         guard draftScheduleIssue == nil,
               let application = draftApplication()
         else { return nil }
-        return application.adjustmentDescription.map { "点击应用时\($0)。" }
+        return application.adjustmentDescription.map { model.trf("点击应用时%@。", $0) }
     }
 
     private var draftWindows: [(title: String, window: TimeWindow)] {
@@ -459,16 +464,16 @@ struct AIPlanBuilderView: View {
 
     private var suggestionSummary: String {
         guard !draftItems.isEmpty else {
-            return "生成后可直接改时间并应用。"
+            return model.tr("生成后可直接改时间并应用。")
         }
         let total = editedDrafts.reduce(0) { $0 + $1.estimatedDurationMinutes }
-        return "\(draftItems.count) 个任务 · 预计 \(total) 分钟"
+        return model.trf("%d 个任务 · 预计 %d 分钟", draftItems.count, total)
     }
 
     private func applyDrafts(to date: LocalDate, title: String) {
         guard let application = draftApplication() else {
             applyStatusMessage = nil
-            model.lastErrorMessage = "草稿无法应用，请检查任务名称，或确认开始时间没有超过当天结束。"
+            model.lastErrorMessage = model.tr("草稿无法应用，请检查任务名称，或确认开始时间没有超过当天结束。")
             return
         }
 
@@ -476,7 +481,7 @@ struct AIPlanBuilderView: View {
         if model.applyTaskDrafts(application.drafts, to: date) {
             model.lastErrorMessage = nil
             let adjustment = application.adjustmentDescription.map { "\($0)。" } ?? ""
-            applyStatusMessage = "已应用到\(title)：\(application.drafts.count) 个任务。\(adjustment)"
+            applyStatusMessage = model.trf("已应用到%@：%d 个任务。%@", title, application.drafts.count, adjustment)
         } else {
             applyStatusMessage = nil
         }
@@ -491,10 +496,10 @@ struct AIPlanBuilderView: View {
     private func title(for date: LocalDate) -> String {
         let today = LocalDate.today()
         if date == today {
-            return "今天"
+            return model.tr("今天")
         }
         if date == today.adding(days: 1) {
-            return "明天"
+            return model.tr("明天")
         }
         if date == model.selectedDate {
             return model.selectedDateTitle
@@ -515,7 +520,7 @@ struct AIPlanBuilderView: View {
         } ?? planningDefaults.start
 
         let draft = TaskDraft(
-            title: "新任务",
+            title: model.tr("新任务"),
             estimatedDurationMinutes: 30,
             fixedStart: cursor
         )
@@ -616,13 +621,13 @@ struct AIPlanBuilderView: View {
 
         var notes: [String] = []
         if repairedInvalidTimes {
-            notes.append("自动补全无效或缺失时间")
+            notes.append(model.tr("自动补全无效或缺失时间"))
         }
         if shiftedPastTimes {
-            notes.append("早于当前起点的任务已从 \(planningDefaults.start.displayString) 开始安排")
+            notes.append(model.trf("早于当前起点的任务已从 %@ 开始安排", planningDefaults.start.displayString))
         }
         if extendedWindow {
-            notes.append("自动扩展当天时间范围")
+            notes.append(model.tr("自动扩展当天时间范围"))
         }
 
         return DraftApplication(
@@ -666,12 +671,12 @@ struct AIPlanBuilderView: View {
         }
 
         let latestEnd = slots.map(\.end).max() ?? planningDefaults.end
-        var notes = ["按任务顺序自动顺延重叠时间"]
+        var notes = [model.tr("按任务顺序自动顺延重叠时间")]
         if latestEnd > planningDefaults.end {
-            notes.append("扩展到 \(latestEnd.displayString)")
+            notes.append(model.trf("扩展到 %@", latestEnd.displayString))
         }
         if durations != rows.map(\.durationMinutes) {
-            notes.append("压缩部分任务时长")
+            notes.append(model.tr("压缩部分任务时长"))
         }
 
         return DraftApplication(
@@ -1000,10 +1005,10 @@ struct AIPlanBuilderView: View {
 
     private var planningControlStatusText: String {
         guard parsedBreakMinutes != nil else {
-            return "间隔需为 0-120"
+            return model.tr("间隔需为 0-120")
         }
         guard parsedPlanningWindow != nil else {
-            return "时间格式 HH:mm"
+            return model.tr("时间格式 HH:mm")
         }
         return planningDefaults.windowDescription
     }

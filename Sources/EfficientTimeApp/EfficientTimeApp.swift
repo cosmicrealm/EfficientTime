@@ -10,6 +10,7 @@ struct EfficientTimeApp: App {
         WindowGroup("EfficientTime", id: "main") {
             ContentView()
                 .environmentObject(model)
+                .environment(\.locale, Locale(identifier: model.effectiveLanguage.localeIdentifier))
                 .onAppear {
                     model.registerMainWindowOpener {
                         openWindow(id: "main")
@@ -21,6 +22,7 @@ struct EfficientTimeApp: App {
         MenuBarExtra {
             MenuBarView()
                 .environmentObject(model)
+                .environment(\.locale, Locale(identifier: model.effectiveLanguage.localeIdentifier))
         } label: {
             Label(model.menuBarTitle, systemImage: "timer")
         }

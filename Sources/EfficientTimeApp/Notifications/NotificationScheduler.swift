@@ -62,8 +62,8 @@ final class NotificationScheduler: NSObject, UNUserNotificationCenterDelegate, @
             if settings.tomorrowPlanningReminderEnabled {
                 self.scheduleDailyNotification(
                     identifier: "efficienttime-tomorrow-planning-reminder",
-                    title: "该规划明天了",
-                    body: "打开 EfficientTime 安排明天的时间表",
+                    title: AppLocalization.text("该规划明天了", language: settings.language),
+                    body: AppLocalization.text("打开 EfficientTime 安排明天的时间表", language: settings.language),
                     time: settings.tomorrowPlanningReminderTime
                 )
             }
@@ -86,8 +86,8 @@ final class NotificationScheduler: NSObject, UNUserNotificationCenterDelegate, @
                advanceTime < block.start {
                 scheduleNotification(
                     identifier: "efficienttime-block-advance-\(block.id.uuidString)",
-                    title: "即将开始：\(block.title)",
-                    body: "还有 \(settings.advanceReminderMinutes) 分钟开始",
+                    title: AppLocalization.format("即将开始：%@", language: settings.language, block.title),
+                    body: AppLocalization.format("还有 %d 分钟开始", language: settings.language, settings.advanceReminderMinutes),
                     date: plan.date,
                     time: advanceTime
                 )
@@ -96,8 +96,8 @@ final class NotificationScheduler: NSObject, UNUserNotificationCenterDelegate, @
             if settings.startNotificationsEnabled {
                 scheduleNotification(
                     identifier: "efficienttime-block-start-\(block.id.uuidString)",
-                    title: "开始：\(block.title)",
-                    body: "当前任务开始了，\(block.start.displayString)-\(block.end.displayString)",
+                    title: AppLocalization.format("开始：%@", language: settings.language, block.title),
+                    body: AppLocalization.format("当前任务开始了，%@-%@", language: settings.language, block.start.displayString, block.end.displayString),
                     date: plan.date,
                     time: block.start
                 )
@@ -106,8 +106,8 @@ final class NotificationScheduler: NSObject, UNUserNotificationCenterDelegate, @
             if settings.endNotificationsEnabled {
                 scheduleNotification(
                     identifier: "efficienttime-block-end-\(block.id.uuidString)",
-                    title: "结束：\(block.title)",
-                    body: "当前任务到结束时间了，请标记完成或跳过",
+                    title: AppLocalization.format("结束：%@", language: settings.language, block.title),
+                    body: AppLocalization.text("当前任务到结束时间了，请标记完成或跳过", language: settings.language),
                     date: plan.date,
                     time: block.end
                 )

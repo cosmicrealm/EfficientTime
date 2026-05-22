@@ -38,22 +38,22 @@ struct PlanSettingsView: View {
             isPresented: deleteConfirmationBinding,
             titleVisibility: .visible
         ) {
-            Button("删除这一天计划", role: .destructive) {
+            Button(model.tr("删除这一天计划"), role: .destructive) {
                 if let pendingDeleteDate {
                     model.deletePlan(on: pendingDeleteDate)
                 }
                 pendingDeleteDate = nil
             }
-            Button("取消", role: .cancel) {}
+            Button(model.tr("取消"), role: .cancel) {}
         } message: {
-            Text("该日期会从本周概览中移除。以后仍可通过日期选择器重新创建。")
+            Text(model.tr("该日期会从本周概览中移除。以后仍可通过日期选择器重新创建。"))
         }
     }
 
     private var datePickerSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("选择日期", systemImage: "calendar")
+                Label(model.tr("选择日期"), systemImage: "calendar")
                     .font(.headline)
                 Spacer()
                 statusBadge
@@ -67,13 +67,13 @@ struct PlanSettingsView: View {
                         .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.bordered)
-                .help("前一天")
+                .help(model.tr("前一天"))
 
                 VStack(spacing: 2) {
                     Text(model.selectedDateTitle)
                         .font(.title3)
                         .fontWeight(.semibold)
-                    Text("\(model.todayPlan.date.displayString) \(model.todayPlan.date.weekdayTitle)")
+                    Text("\(model.todayPlan.date.displayString) \(model.weekdayTitle(for: model.todayPlan.date))")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -86,7 +86,7 @@ struct PlanSettingsView: View {
                         .frame(width: 22, height: 22)
                 }
                 .buttonStyle(.bordered)
-                .help("后一天")
+                .help(model.tr("后一天"))
             }
 
             PlanMonthCalendarView(
@@ -98,13 +98,13 @@ struct PlanSettingsView: View {
             }
 
             HStack(spacing: 8) {
-                Button("今天") {
+                Button(model.tr("今天")) {
                     model.selectToday()
                 }
                 .buttonStyle(.bordered)
-                .tint(model.selectedDateTitle == "今天" ? model.settings.accentColor : .secondary)
+                .tint(model.selectedDate == LocalDate.today() ? model.settings.accentColor : .secondary)
 
-                Button("明天") {
+                Button(model.tr("明天")) {
                     model.selectTomorrow()
                 }
                 .buttonStyle(.bordered)
@@ -116,7 +116,7 @@ struct PlanSettingsView: View {
     }
 
     private var statusBadge: some View {
-        Text(model.todayPlan.status.title)
+        Text(model.planStatusTitle(model.todayPlan.status))
             .font(.caption)
             .padding(.horizontal, 9)
             .padding(.vertical, 4)
@@ -127,12 +127,12 @@ struct PlanSettingsView: View {
 
     private var weekOverview: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("本周概览")
+            Text(model.tr("本周概览"))
                 .font(.subheadline)
                 .fontWeight(.semibold)
 
             if model.weekSummaries.isEmpty {
-                Text("本周还没有保存的计划。")
+                Text(model.tr("本周还没有保存的计划。"))
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -144,17 +144,17 @@ struct PlanSettingsView: View {
                     } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
-                                Text("\(summary.date.weekdayTitle) \(summary.date.shortDisplayString)")
+                                Text("\(model.weekdayTitle(for: summary.date)) \(summary.date.shortDisplayString)")
                                     .font(.caption)
                                     .fontWeight(summary.isSelected ? .semibold : .regular)
-                                Text(summary.status.title)
+                                Text(model.planStatusTitle(summary.status))
                                     .font(.caption2)
                                     .foregroundStyle(.secondary)
                             }
 
                             Spacer()
 
-                            Text("\(summary.taskCount) 项")
+                            Text(model.itemCountText(summary.taskCount))
                                 .font(.caption)
                             Text("\(summary.plannedMinutes / 60)h\(summary.plannedMinutes % 60)m")
                                 .font(.caption)
@@ -182,7 +182,7 @@ struct PlanSettingsView: View {
                     }
                     .buttonStyle(.borderless)
                     .disabled(!model.canDeletePlan(on: summary.date))
-                    .help("删除这一天计划")
+                    .help(model.tr("删除这一天计划"))
                 }
             }
         }
@@ -191,21 +191,21 @@ struct PlanSettingsView: View {
     private var copyControls: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Label("复制当前计划", systemImage: "doc.on.doc")
+                Label(model.tr("复制当前计划"), systemImage: "doc.on.doc")
                     .font(.subheadline)
                     .fontWeight(.semibold)
                 Spacer()
                 Button {
                     model.copyCurrentPlan(to: copyTargetDate)
                 } label: {
-                    Label("复制", systemImage: "arrowshape.turn.up.forward")
+                    Label(model.tr("复制"), systemImage: "arrowshape.turn.up.forward")
                 }
                 .buttonStyle(.bordered)
                 .disabled(copyTargetDate == model.selectedDate || !model.canDeletePlan(on: model.selectedDate))
             }
 
             HStack {
-                Text("目标：\(copyTargetDate.displayString) \(copyTargetDate.weekdayTitle)")
+                Text(model.trf("目标：%@ %@", copyTargetDate.displayString, model.weekdayTitle(for: copyTargetDate)))
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 Spacer()
@@ -225,9 +225,9 @@ struct PlanSettingsView: View {
 
     private var deleteConfirmationTitle: String {
         guard let pendingDeleteDate else {
-            return "确定删除计划吗？"
+            return model.tr("确定删除计划吗？")
         }
-        return "确定删除 \(pendingDeleteDate.displayString) 的计划吗？"
+        return model.trf("确定删除 %@ 的计划吗？", pendingDeleteDate.displayString)
     }
 
     private var deleteConfirmationBinding: Binding<Bool> {
@@ -262,7 +262,7 @@ struct PlanMonthCalendarView: View {
     var isCompact = false
     var onSelect: (LocalDate) -> Void
 
-    private let weekdayTitles = ["日", "一", "二", "三", "四", "五", "六"]
+    @EnvironmentObject private var model: AppModel
 
     var body: some View {
         VStack(spacing: isCompact ? 5 : 8) {
@@ -270,16 +270,16 @@ struct PlanMonthCalendarView: View {
                 calendarButton("chevron.left.2") {
                     visibleMonth = adding(years: -1, to: visibleMonth)
                 }
-                .help("上一年")
+                .help(model.tr("上一年"))
 
                 calendarButton("chevron.left") {
                     visibleMonth = adding(months: -1, to: visibleMonth)
                 }
-                .help("上一月")
+                .help(model.tr("上一月"))
 
                 Spacer()
 
-                Text("\(visibleMonth.year) 年 \(visibleMonth.month) 月")
+                Text(monthTitle)
                     .font(.system(size: isCompact ? 12 : 14, weight: .bold, design: .rounded))
                     .monospacedDigit()
 
@@ -288,16 +288,16 @@ struct PlanMonthCalendarView: View {
                 calendarButton("chevron.right") {
                     visibleMonth = adding(months: 1, to: visibleMonth)
                 }
-                .help("下一月")
+                .help(model.tr("下一月"))
 
                 calendarButton("chevron.right.2") {
                     visibleMonth = adding(years: 1, to: visibleMonth)
                 }
-                .help("下一年")
+                .help(model.tr("下一年"))
             }
 
             LazyVGrid(columns: calendarColumns, spacing: isCompact ? 3 : 5) {
-                ForEach(weekdayTitles, id: \.self) { title in
+                ForEach(AppLocalization.shortWeekdayTitles(language: model.effectiveLanguage), id: \.self) { title in
                     Text(title)
                         .font(.system(size: isCompact ? 9 : 11, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -352,6 +352,10 @@ struct PlanMonthCalendarView: View {
             cells.append(contentsOf: Array<LocalDate?>(repeating: nil, count: 7 - remainder))
         }
         return cells
+    }
+
+    private var monthTitle: String {
+        model.trf("%d 年 %d 月", visibleMonth.year, visibleMonth.month)
     }
 
     private func calendarButton(_ systemName: String, action: @escaping () -> Void) -> some View {

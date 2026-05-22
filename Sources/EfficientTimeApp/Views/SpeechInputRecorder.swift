@@ -8,13 +8,23 @@ final class SpeechInputRecorder: ObservableObject {
     @Published var statusText = "语音输入待开始。"
 
     private let audioEngine = AVAudioEngine()
-    private let speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh_CN"))
+    private var language: AppLanguage = .system
+    private var speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: "zh_CN"))
     private var recognitionRequest: SFSpeechAudioBufferRecognitionRequest?
     private var recognitionTask: SFSpeechRecognitionTask?
     private var audioTap: SpeechAudioTap?
     private var latestTranscript = ""
     private var transcriptHandler: (@MainActor (String) -> Void)?
     private var permissionTimeoutTask: Task<Void, Never>?
+
+    func setLanguage(_ language: AppLanguage) {
+        guard !isRecording else { return }
+        self.language = language
+        speechRecognizer = SFSpeechRecognizer(locale: Locale(identifier: speechLocaleIdentifier(for: language)))
+        if statusText == "语音输入待开始。" {
+            statusText = tr("语音输入待开始。")
+        }
+    }
 
     func toggleRecording(onTranscript: @escaping @MainActor (String) -> Void) {
         if isRecording {
@@ -43,37 +53,37 @@ final class SpeechInputRecorder: ObservableObject {
         permissionTimeoutTask?.cancel()
         permissionTimeoutTask = nil
         isRecording = false
-        statusText = didCommit ? "语音已写入原始计划。" : "没有识别到可写入的文字。"
+        statusText = didCommit ? tr("语音已写入原始计划。") : tr("没有识别到可写入的文字。")
         task?.cancel()
     }
 
     private func requestAuthorizationAndStart(onTranscript: @escaping @MainActor (String) -> Void) {
         guard speechRecognizer != nil else {
-            statusText = "当前系统不支持中文语音识别。"
+            statusText = tr("当前系统不支持所选语言的语音识别。")
             return
         }
 
         transcriptHandler = onTranscript
-        statusText = "正在申请语音识别权限..."
-        startPermissionTimeout(message: "如果系统弹出语音识别权限确认，请先允许；如果没有看到弹窗，请到 macOS 设置里检查 EfficientTime 的语音识别权限。")
+        statusText = tr("正在申请语音识别权限...")
+        startPermissionTimeout(message: tr("如果系统弹出语音识别权限确认，请先允许；如果没有看到弹窗，请到 macOS 设置里检查 EfficientTime 的语音识别权限。"))
         SpeechPermissionRequester.requestSpeechAuthorization { [weak self] speechStatus in
             guard let self else { return }
             self.permissionTimeoutTask?.cancel()
             self.permissionTimeoutTask = nil
             guard speechStatus == .authorized else {
-                self.statusText = Self.speechAuthorizationMessage(for: speechStatus)
+                self.statusText = self.speechAuthorizationMessage(for: speechStatus)
                 self.transcriptHandler = nil
                 return
             }
 
-            self.statusText = "正在申请麦克风权限..."
-            self.startPermissionTimeout(message: "如果系统弹出麦克风权限确认，请先允许；如果没有看到弹窗，请到 macOS 设置里检查 EfficientTime 的麦克风权限。")
+            self.statusText = self.tr("正在申请麦克风权限...")
+            self.startPermissionTimeout(message: self.tr("如果系统弹出麦克风权限确认，请先允许；如果没有看到弹窗，请到 macOS 设置里检查 EfficientTime 的麦克风权限。"))
             SpeechPermissionRequester.requestMicrophoneAccess { [weak self] granted in
                 guard let self else { return }
                 self.permissionTimeoutTask?.cancel()
                 self.permissionTimeoutTask = nil
                 guard granted else {
-                    self.statusText = "麦克风权限未开启，请在 macOS 设置里允许 EfficientTime 使用麦克风。"
+                    self.statusText = self.tr("麦克风权限未开启，请在 macOS 设置里允许 EfficientTime 使用麦克风。")
                     self.transcriptHandler = nil
                     return
                 }
@@ -101,7 +111,7 @@ final class SpeechInputRecorder: ObservableObject {
         else {
             recognitionRequest = nil
             transcriptHandler = nil
-            statusText = "没有检测到可用麦克风输入，请检查系统输入设备。"
+            statusText = tr("没有检测到可用麦克风输入，请检查系统输入设备。")
             return
         }
         inputNode.removeTap(onBus: 0)
@@ -117,12 +127,12 @@ final class SpeechInputRecorder: ObservableObject {
             audioTap = nil
             recognitionRequest = nil
             transcriptHandler = nil
-            statusText = "录音启动失败：\(error.localizedDescription)"
+            statusText = AppLocalization.format("录音启动失败：%@", language: language, error.localizedDescription)
             return
         }
 
         isRecording = true
-        statusText = "正在听写..."
+        statusText = tr("正在听写...")
         recognitionTask = speechRecognizer?.recognitionTask(
             with: request,
             resultHandler: SpeechPermissionRequester.recognitionResultHandler { [weak self] transcript, isFinal, didError in
@@ -134,7 +144,7 @@ final class SpeechInputRecorder: ObservableObject {
     private func handleRecognitionResult(transcript: String?, isFinal: Bool, didError: Bool) {
         if let transcript {
             latestTranscript = transcript
-            statusText = isFinal ? "识别完成，正在写入..." : "正在识别：\(latestTranscript)"
+            statusText = isFinal ? tr("识别完成，正在写入...") : AppLocalization.format("正在识别：%@", language: language, latestTranscript)
         }
 
         if didError {
@@ -168,18 +178,34 @@ final class SpeechInputRecorder: ObservableObject {
         return true
     }
 
-    private static func speechAuthorizationMessage(for status: SFSpeechRecognizerAuthorizationStatus) -> String {
+    private func speechAuthorizationMessage(for status: SFSpeechRecognizerAuthorizationStatus) -> String {
         switch status {
         case .denied:
-            return "语音识别权限已拒绝，请在 macOS 设置里允许 EfficientTime 使用语音识别。"
+            return tr("语音识别权限已拒绝，请在 macOS 设置里允许 EfficientTime 使用语音识别。")
         case .restricted:
-            return "当前系统限制了语音识别功能。"
+            return tr("当前系统限制了语音识别功能。")
         case .notDetermined:
-            return "语音识别权限尚未授权。"
+            return tr("语音识别权限尚未授权。")
         case .authorized:
-            return "语音识别已授权。"
+            return tr("语音识别已授权。")
         @unknown default:
-            return "语音识别权限状态未知。"
+            return tr("语音识别权限状态未知。")
+        }
+    }
+
+    private func tr(_ key: String) -> String {
+        AppLocalization.text(key, language: language)
+    }
+
+    private func speechLocaleIdentifier(for language: AppLanguage) -> String {
+        switch language.resolved {
+        case .zhHans: "zh_CN"
+        case .ja: "ja_JP"
+        case .ko: "ko_KR"
+        case .fr: "fr_FR"
+        case .de: "de_DE"
+        case .es: "es_ES"
+        case .system, .en: "en_US"
         }
     }
 }

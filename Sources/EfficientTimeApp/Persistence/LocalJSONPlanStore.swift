@@ -87,7 +87,12 @@ struct DailyWorkspace: Codable, Sendable {
 struct AppSettings: Codable, Sendable {
     static let defaultDeepSeekModel = "deepseek-v4-flash"
     static let legacyDefaultDeepSeekModel = "deepseek-v4-pro"
+    static let defaultArkModel = "doubao-seed-2-0-pro-260215"
+    static let defaultOpenAIModel = "gpt-5.4-mini"
+    static let defaultGeminiModel = "gemini-3.5-flash"
+    static let defaultClaudeModel = "claude-sonnet-4-6"
 
+    var language: AppLanguage
     var theme: AppTheme
     var floatingPanelAppearance: FloatingPanelAppearance
     var floatingPanelOpacity: Double
@@ -95,6 +100,9 @@ struct AppSettings: Codable, Sendable {
     var aiProvider: AIProvider
     var deepSeekModel: String
     var arkModel: String
+    var openAIModel: String
+    var geminiModel: String
+    var claudeModel: String
     var deepSeekEffort: PlanningEffort
     var aiPlanningDefaults: AIPlanningDefaultSchedule
     var floatingPreviousCount: Int
@@ -106,13 +114,17 @@ struct AppSettings: Codable, Sendable {
     var tomorrowPlanningReminderTime: ClockTime
 
     init(
+        language: AppLanguage = .system,
         theme: AppTheme = .teal,
         floatingPanelAppearance: FloatingPanelAppearance = .mint,
         floatingPanelOpacity: Double = 0.92,
         countdownStyle: CountdownStyle = .vivid,
         aiProvider: AIProvider = .deepSeek,
         deepSeekModel: String = Self.defaultDeepSeekModel,
-        arkModel: String = "doubao-seed-2-0-pro-260215",
+        arkModel: String = Self.defaultArkModel,
+        openAIModel: String = Self.defaultOpenAIModel,
+        geminiModel: String = Self.defaultGeminiModel,
+        claudeModel: String = Self.defaultClaudeModel,
         deepSeekEffort: PlanningEffort = .normal,
         aiPlanningDefaults: AIPlanningDefaultSchedule = AIPlanningDefaults.standard,
         floatingPreviousCount: Int = 3,
@@ -123,13 +135,17 @@ struct AppSettings: Codable, Sendable {
         tomorrowPlanningReminderEnabled: Bool = true,
         tomorrowPlanningReminderTime: ClockTime = ClockTime(hour: 20, minute: 0)
     ) {
+        self.language = language
         self.theme = theme
         self.floatingPanelAppearance = floatingPanelAppearance
         self.floatingPanelOpacity = floatingPanelOpacity
         self.countdownStyle = countdownStyle
         self.aiProvider = aiProvider
         self.deepSeekModel = Self.normalizedDeepSeekModel(deepSeekModel)
-        self.arkModel = arkModel
+        self.arkModel = Self.normalizedModel(arkModel, defaultValue: Self.defaultArkModel)
+        self.openAIModel = Self.normalizedModel(openAIModel, defaultValue: Self.defaultOpenAIModel)
+        self.geminiModel = Self.normalizedModel(geminiModel, defaultValue: Self.defaultGeminiModel)
+        self.claudeModel = Self.normalizedModel(claudeModel, defaultValue: Self.defaultClaudeModel)
         self.deepSeekEffort = deepSeekEffort
         self.aiPlanningDefaults = Self.normalizedPlanningDefaults(aiPlanningDefaults)
         self.floatingPreviousCount = floatingPreviousCount
@@ -142,6 +158,7 @@ struct AppSettings: Codable, Sendable {
     }
 
     enum CodingKeys: String, CodingKey {
+        case language
         case theme
         case floatingPanelAppearance
         case floatingPanelOpacity
@@ -149,6 +166,9 @@ struct AppSettings: Codable, Sendable {
         case aiProvider
         case deepSeekModel
         case arkModel
+        case openAIModel
+        case geminiModel
+        case claudeModel
         case deepSeekEffort
         case aiPlanningDefaults
         case floatingPreviousCount
@@ -162,6 +182,7 @@ struct AppSettings: Codable, Sendable {
 
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.language = try container.decodeIfPresent(AppLanguage.self, forKey: .language) ?? .system
         self.theme = try container.decodeIfPresent(AppTheme.self, forKey: .theme) ?? .teal
         self.floatingPanelAppearance = try container.decodeIfPresent(FloatingPanelAppearance.self, forKey: .floatingPanelAppearance) ?? .mint
         self.floatingPanelOpacity = try container.decodeIfPresent(Double.self, forKey: .floatingPanelOpacity) ?? 0.92
@@ -170,7 +191,22 @@ struct AppSettings: Codable, Sendable {
         self.deepSeekModel = Self.normalizedDeepSeekModel(
             try container.decodeIfPresent(String.self, forKey: .deepSeekModel) ?? Self.defaultDeepSeekModel
         )
-        self.arkModel = try container.decodeIfPresent(String.self, forKey: .arkModel) ?? "doubao-seed-2-0-pro-260215"
+        self.arkModel = Self.normalizedModel(
+            try container.decodeIfPresent(String.self, forKey: .arkModel) ?? Self.defaultArkModel,
+            defaultValue: Self.defaultArkModel
+        )
+        self.openAIModel = Self.normalizedModel(
+            try container.decodeIfPresent(String.self, forKey: .openAIModel) ?? Self.defaultOpenAIModel,
+            defaultValue: Self.defaultOpenAIModel
+        )
+        self.geminiModel = Self.normalizedModel(
+            try container.decodeIfPresent(String.self, forKey: .geminiModel) ?? Self.defaultGeminiModel,
+            defaultValue: Self.defaultGeminiModel
+        )
+        self.claudeModel = Self.normalizedModel(
+            try container.decodeIfPresent(String.self, forKey: .claudeModel) ?? Self.defaultClaudeModel,
+            defaultValue: Self.defaultClaudeModel
+        )
         self.deepSeekEffort = try container.decodeIfPresent(PlanningEffort.self, forKey: .deepSeekEffort) ?? .normal
         let decodedPlanningDefaults = try container.decodeIfPresent(AIPlanningDefaultSchedule.self, forKey: .aiPlanningDefaults) ?? AIPlanningDefaults.standard
         self.aiPlanningDefaults = Self.normalizedPlanningDefaults(decodedPlanningDefaults)
@@ -189,6 +225,11 @@ struct AppSettings: Codable, Sendable {
             return defaultDeepSeekModel
         }
         return trimmed
+    }
+
+    static func normalizedModel(_ model: String, defaultValue: String) -> String {
+        let trimmed = model.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? defaultValue : trimmed
     }
 
     static func normalizedPlanningDefaults(_ schedule: AIPlanningDefaultSchedule) -> AIPlanningDefaultSchedule {
