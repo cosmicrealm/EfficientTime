@@ -5,6 +5,8 @@ cd "$(dirname "$0")/.."
 
 VERSION="${VERSION:-0.02}"
 BUILD_NUMBER="${BUILD_NUMBER:-1}"
+BUNDLE_ID="${BUNDLE_ID:-local.zhangjinyang.EfficientTime}"
+MINIMUM_SYSTEM_VERSION="${MINIMUM_SYSTEM_VERSION:-15.0}"
 
 swift build -c release
 
@@ -21,6 +23,9 @@ chmod +x "$MACOS_DIR/EfficientTime"
 if [[ -f "Resources/AppIcon.icns" ]]; then
   cp "Resources/AppIcon.icns" "$RESOURCES_DIR/AppIcon.icns"
 fi
+if [[ -f "Resources/PrivacyInfo.xcprivacy" ]]; then
+  cp "Resources/PrivacyInfo.xcprivacy" "$RESOURCES_DIR/PrivacyInfo.xcprivacy"
+fi
 
 cat > "$CONTENTS_DIR/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -32,7 +37,7 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <key>CFBundleExecutable</key>
   <string>EfficientTime</string>
   <key>CFBundleIdentifier</key>
-  <string>local.zhangjinyang.EfficientTime</string>
+  <string>${BUNDLE_ID}</string>
   <key>CFBundleName</key>
   <string>EfficientTime</string>
   <key>CFBundleDisplayName</key>
@@ -41,12 +46,16 @@ cat > "$CONTENTS_DIR/Info.plist" <<PLIST
   <string>AppIcon</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.productivity</string>
   <key>CFBundleShortVersionString</key>
   <string>${VERSION}</string>
   <key>CFBundleVersion</key>
   <string>${BUILD_NUMBER}</string>
   <key>LSMinimumSystemVersion</key>
-  <string>15.0</string>
+  <string>${MINIMUM_SYSTEM_VERSION}</string>
+  <key>ITSAppUsesNonExemptEncryption</key>
+  <false/>
   <key>LSUIElement</key>
   <false/>
   <key>NSMicrophoneUsageDescription</key>

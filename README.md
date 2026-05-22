@@ -107,6 +107,8 @@ dist/EfficientTime-0.02-macOS.zip
 
 The `.dmg` is the recommended Release asset, while the zip can stay as a fallback. The current package is a local development build. It is not Developer ID signed or notarized yet.
 
+For Mac App Store preparation, see [docs/app-store-submission.md](docs/app-store-submission.md).
+
 ## Project Layout
 
 ```text

@@ -108,6 +108,8 @@ dist/EfficientTime-0.02-macOS.zip
 
 Release 推荐上传 `.dmg`，zip 可作为备用下载。当前包是本地开发包，尚未进行 Developer ID 签名和 Apple 公证。
 
+Mac App Store 上架准备见 [docs/app-store-submission.md](docs/app-store-submission.md)。
+
 ## 项目结构
 
 ```text
