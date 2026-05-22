@@ -10,7 +10,7 @@ struct DayTimelineView: View {
 
             ScrollView {
                 LazyVStack(spacing: 8) {
-                    ForEach(model.todayPlan.blocks) { block in
+                    ForEach(model.visiblePlanBlocks) { block in
                         blockRow(block)
                     }
                 }
@@ -22,13 +22,13 @@ struct DayTimelineView: View {
     }
 
     private var header: some View {
-        HStack(alignment: .center) {
+        HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 4) {
                 Text("\(model.selectedDateTitle)时间表")
                     .font(.title2)
                     .fontWeight(.semibold)
                 HStack(spacing: 8) {
-                    Text("完成 \(model.completedCount)/\(model.todayPlan.blocks.count) · \(model.availableWindowsText)")
+                    Text("完成 \(model.completedCount)/\(model.visiblePlanBlocks.count) · \(model.availableWindowsText)")
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
 
@@ -50,7 +50,7 @@ struct DayTimelineView: View {
             }
             .buttonStyle(.borderedProminent)
             .tint(model.settings.accentColor)
-            .disabled(model.todayPlan.blocks.isEmpty || model.todayPlan.status == .running || model.todayPlan.status == .finished)
+            .disabled(model.visiblePlanBlocks.isEmpty || model.todayPlan.status == .running || model.todayPlan.status == .finished)
         }
         .padding(.horizontal)
     }
@@ -117,7 +117,7 @@ struct DayTimelineView: View {
             Button {
                 model.delayBlock(block.id)
             } label: {
-                Label(block.status == .delayed ? "取消推迟" : "推迟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
+                Label(block.status == .delayed ? "取消推迟" : "推迟 20 分钟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
             }
             .disabled(block.status == .done)
 

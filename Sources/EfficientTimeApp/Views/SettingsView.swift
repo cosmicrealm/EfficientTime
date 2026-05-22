@@ -92,7 +92,7 @@ struct SettingsView: View {
                 .pickerStyle(.menu)
                 VStack(alignment: .leading, spacing: 6) {
                     Text("透明度 \(Int(model.settings.floatingPanelOpacity * 100))%")
-                    Slider(value: $model.settings.floatingPanelOpacity, in: 0.45...1.0, step: 0.05)
+                    Slider(value: $model.settings.floatingPanelOpacity, in: 0.0...1.0, step: 0.05)
                 }
                 Stepper("显示前 \(model.settings.floatingPreviousCount) 个", value: $model.settings.floatingPreviousCount, in: 0...8)
                 Stepper("显示后 \(model.settings.floatingNextCount) 个", value: $model.settings.floatingNextCount, in: 0...8)

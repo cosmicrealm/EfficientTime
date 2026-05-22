@@ -4,12 +4,13 @@
 
 EfficientTime 是一个支持 AI 规划的本地单机 macOS 高效办公助手。它可以把零散的任务文字整理成可执行的每日时间表，并通过菜单栏、桌面悬浮窗和系统通知持续提醒你现在应该做什么、接下来做什么、哪些事项已经完成。
 
-当前版本：`0.01`
+当前版本：`0.02`
 
 ## 核心用途
 
 - 把一天的工作拆成清晰的时间块。
 - 用桌面常驻悬浮窗实时显示当前任务、剩余时间和附近任务。
+- 用可点击的 24 小时钟表盘查看当天哪些时间已安排、完成、跳过、推迟或仍然空闲。
 - 悬浮窗会在应用运行时常驻桌面并保持可见，需要减少占用时可以折叠/缩小。
 - 在任务开始、结束等关键时间主动提醒。
 - 支持快速手动添加任务，也支持 AI 把原始计划文本整理成可编辑的日程草稿。
@@ -95,14 +96,14 @@ open dist/EfficientTime.app
 生成 GitHub Release 可上传的 `.dmg` 和 zip：
 
 ```bash
-./scripts/package_release.sh 0.01
+./scripts/package_release.sh 0.02
 ```
 
 输出文件：
 
 ```text
-dist/EfficientTime-0.01.dmg
-dist/EfficientTime-0.01-macOS.zip
+dist/EfficientTime-0.02.dmg
+dist/EfficientTime-0.02-macOS.zip
 ```
 
 Release 推荐上传 `.dmg`，zip 可作为备用下载。当前包是本地开发包，尚未进行 Developer ID 签名和 Apple 公证。
@@ -132,4 +133,4 @@ EfficientTime 是一个 vibe coding 项目，主要基于 OpenAI Codex 完成产
 
 ## 发布状态
 
-`0.01` 是早期预览版，聚焦本地时间表执行、实时提醒、悬浮窗和 AI 草稿规划。后续可以继续补充签名、公证、安装包和更完善的交互细节。
+`0.02` 是早期预览版，聚焦本地时间表执行、实时提醒、悬浮窗、AI 草稿规划，以及更清晰的当天执行状态总览。后续可以继续补充签名、公证、安装包和更完善的交互细节。

@@ -30,6 +30,7 @@ final class AppModel: ObservableObject {
     private let reminderPanelController = ReminderPanelController()
     private let workspaceStore = LocalJSONWorkspaceStore()
     private let secretStore = LocalSecretStore()
+    private let delayStepMinutes = 20
     private var dailyWorkspaces: [LocalDate: DailyWorkspace]
     private var floatingPanelController: FloatingPanelController?
     private var clockTask: Swift.Task<Void, Never>?
@@ -82,7 +83,7 @@ final class AppModel: ObservableObject {
     var currentBlocks: [TimeBlock] {
         guard selectedDate == LocalDate.today() else { return [] }
         let current = Self.clockTime(from: now)
-        return todayPlan.blocks.filter { $0.start <= current && current < $0.end }
+        return visiblePlanBlocks.filter { $0.start <= current && current < $0.end }
     }
 
     var currentBlock: TimeBlock? {
@@ -91,11 +92,15 @@ final class AppModel: ObservableObject {
 
     var nextBlock: TimeBlock? {
         let current = selectedDate == LocalDate.today() ? Self.clockTime(from: now) : .startOfDay
-        return todayPlan.blocks.first { $0.start > current }
+        return visiblePlanBlocks.first { $0.start > current }
     }
 
     var completedCount: Int {
-        todayPlan.blocks.filter { $0.status == .done }.count
+        visiblePlanBlocks.filter { $0.status == .done }.count
+    }
+
+    var visiblePlanBlocks: [TimeBlock] {
+        todayPlan.blocks.filter { $0.status != .deleted }
     }
 
     var currentRemainingMinutes: Int? {
@@ -143,13 +148,14 @@ final class AppModel: ObservableObject {
     }
 
     var reviewSummary: String {
-        let done = todayPlan.blocks.filter { $0.status == .done }
-        let skipped = todayPlan.blocks.filter { $0.status == .skipped }
-        let delayed = todayPlan.blocks.filter { $0.status == .delayed }
-        let plannedMinutes = todayPlan.blocks.reduce(0) { $0 + $1.durationMinutes }
-        let actualMinutes = todayPlan.blocks.compactMap(actualDurationMinutes(for:)).reduce(0, +)
+        let blocks = visiblePlanBlocks
+        let done = blocks.filter { $0.status == .done }
+        let skipped = blocks.filter { $0.status == .skipped }
+        let delayed = blocks.filter { $0.status == .delayed }
+        let plannedMinutes = blocks.reduce(0) { $0 + $1.durationMinutes }
+        let actualMinutes = blocks.compactMap(actualDurationMinutes(for:)).reduce(0, +)
         return """
-        \(selectedDateTitle)计划：\(todayPlan.blocks.count) 个时间块，计划 \(plannedMinutes) 分钟。
+        \(selectedDateTitle)计划：\(blocks.count) 个时间块，计划 \(plannedMinutes) 分钟。
         已完成：\(done.count) 个；已跳过：\(skipped.count) 个；已推迟：\(delayed.count) 个。
         已记录实际耗时：\(actualMinutes) 分钟；执行事件：\(executionLogs.count) 条。
         状态：\(todayPlan.status.title)。
@@ -497,19 +503,33 @@ final class AppModel: ObservableObject {
 
     func markBlockDone(_ id: TimeBlock.ID) {
         selectedBlockID = id
+        guard selectedBlock?.status != .deleted else { return }
         updateBlock(id, status: .done)
     }
 
     func skipBlock(_ id: TimeBlock.ID) {
+        guard todayPlan.blocks.first(where: { $0.id == id })?.status != .deleted else { return }
         toggleBlockStatus(id, targetStatus: .skipped)
     }
 
     func delayBlock(_ id: TimeBlock.ID) {
-        toggleBlockStatus(id, targetStatus: .delayed)
+        guard let block = todayPlan.blocks.first(where: { $0.id == id }) else { return }
+        guard block.status != .deleted else { return }
+        selectedBlockID = id
+        let isCancellingDelay = block.status == .delayed
+        let offset = isCancellingDelay ? -delayStepMinutes : delayStepMinutes
+        let nextStatus: TimeBlockStatus = isCancellingDelay ? .planned : .delayed
+        shiftTimeline(
+            from: block.start,
+            by: offset,
+            targetBlockID: id,
+            targetStatus: nextStatus
+        )
     }
 
     func toggleBlockCompletion(_ id: TimeBlock.ID) {
         guard let index = todayPlan.blocks.firstIndex(where: { $0.id == id }) else { return }
+        guard todayPlan.blocks[index].status != .deleted else { return }
         let nextStatus: TimeBlockStatus = todayPlan.blocks[index].status == .done ? .planned : .done
         todayPlan.blocks[index].status = nextStatus
         if nextStatus == .done {
@@ -555,7 +575,6 @@ final class AppModel: ObservableObject {
             return
         }
         delayBlock(target.id)
-        lastErrorMessage = target.status == .delayed ? "已取消推迟「\(target.title)」。" : "已推迟「\(target.title)」。"
     }
 
     func markSelectedDone() {
@@ -579,16 +598,34 @@ final class AppModel: ObservableObject {
     }
 
     func deleteBlock(_ id: TimeBlock.ID) {
-        guard let block = todayPlan.blocks.first(where: { $0.id == id }) else { return }
+        guard let index = todayPlan.blocks.firstIndex(where: { $0.id == id }) else { return }
+        var block = todayPlan.blocks[index]
         if let taskId = block.taskId {
             tasks.removeAll { $0.id == taskId }
         }
-        todayPlan.blocks.removeAll { $0.id == block.id }
-        if selectedBlockID == block.id {
-            selectedBlockID = nil
-        }
-        appendSystemLog(eventType: .replanned, blockId: block.id, payload: ["reason": "delete"])
+        block.status = .deleted
+        block.actualEndAt = Date()
+        todayPlan.blocks[index] = block
+        selectedBlockID = block.id
+        appendSystemLog(eventType: .replanned, blockId: block.id, payload: ["reason": "soft_delete"])
         saveWorkspace()
+        lastErrorMessage = "已将「\(block.title)」移到已删除。"
+    }
+
+    func clearDeletedBlocks() {
+        let deletedBlocks = todayPlan.blocks.filter { $0.status == .deleted }
+        guard !deletedBlocks.isEmpty else {
+            lastErrorMessage = "当前没有需要清理的已删除事项。"
+            return
+        }
+        let deletedIDs = Set(deletedBlocks.map(\.id))
+        todayPlan.blocks.removeAll { deletedIDs.contains($0.id) }
+        if let selectedBlockID, deletedIDs.contains(selectedBlockID) {
+            self.selectedBlockID = nil
+        }
+        appendSystemLog(eventType: .replanned, blockId: deletedBlocks.first?.id, payload: ["reason": "clear_deleted", "count": "\(deletedBlocks.count)"])
+        saveWorkspace()
+        lastErrorMessage = "已彻底清理 \(deletedBlocks.count) 个已删除事项。"
     }
 
     func updateSelectedBlock(startText: String, endText: String) -> Bool {
@@ -596,6 +633,10 @@ final class AppModel: ObservableObject {
               let blockIndex = todayPlan.blocks.firstIndex(where: { $0.id == selectedBlockID })
         else {
             lastErrorMessage = "请先选择一个时间块。"
+            return false
+        }
+        guard todayPlan.blocks[blockIndex].status != .deleted else {
+            lastErrorMessage = "已删除事项不能更新时间；可以先从已删除中清理。"
             return false
         }
 
@@ -802,7 +843,7 @@ final class AppModel: ObservableObject {
         }
         settings.floatingPreviousCount = min(max(settings.floatingPreviousCount, 0), 8)
         settings.floatingNextCount = min(max(settings.floatingNextCount, 0), 8)
-        settings.floatingPanelOpacity = min(max(settings.floatingPanelOpacity, 0.45), 1.0)
+        settings.floatingPanelOpacity = min(max(settings.floatingPanelOpacity, 0.0), 1.0)
         settings.advanceReminderMinutes = min(max(settings.advanceReminderMinutes, 0), 60)
         saveWorkspace()
         scheduleNotifications()
@@ -938,7 +979,7 @@ final class AppModel: ObservableObject {
     }
 
     func nearbyBlocksForFloatingPanel() -> [TimeBlock] {
-        let blocks = todayPlan.blocks.sorted { $0.start < $1.start }
+        let blocks = visiblePlanBlocks.sorted { $0.start < $1.start }
         guard !blocks.isEmpty else { return [] }
 
         let centerIndex: Int
@@ -1036,6 +1077,79 @@ final class AppModel: ObservableObject {
         selectedBlockID = id
         let nextStatus: TimeBlockStatus = block.status == targetStatus ? .planned : targetStatus
         updateBlock(id, status: nextStatus)
+    }
+
+    private func shiftTimeline(
+        from anchorStart: ClockTime,
+        by offsetMinutes: Int,
+        targetBlockID: TimeBlock.ID,
+        targetStatus: TimeBlockStatus
+    ) {
+        let affectedIndices = todayPlan.blocks.indices.filter { index in
+            let block = todayPlan.blocks[index]
+            return block.id == targetBlockID ||
+                (block.start >= anchorStart && block.status != .done && block.status != .skipped && block.status != .deleted)
+        }
+        guard !affectedIndices.isEmpty else { return }
+
+        var shiftedBlocks: [TimeBlock] = []
+        for index in affectedIndices {
+            var block = todayPlan.blocks[index]
+            guard let shiftedStart = block.start.adding(minutes: offsetMinutes),
+                  let shiftedEnd = block.end.adding(minutes: offsetMinutes),
+                  shiftedStart < shiftedEnd
+            else {
+                lastErrorMessage = offsetMinutes > 0
+                    ? "推迟后会超过当天 24:00，无法整体顺延。"
+                    : "取消推迟后会早于当天 00:00，无法整体回退。"
+                return
+            }
+            block.start = shiftedStart
+            block.end = shiftedEnd
+            if block.id == targetBlockID {
+                block.status = targetStatus
+                if targetStatus == .planned {
+                    block.actualStartAt = nil
+                    block.actualEndAt = nil
+                }
+            }
+            shiftedBlocks.append(block)
+        }
+
+        for block in shiftedBlocks {
+            guard let index = todayPlan.blocks.firstIndex(where: { $0.id == block.id }) else { continue }
+            todayPlan.blocks[index] = block
+            syncTaskTime(with: block)
+        }
+        todayPlan.blocks.sort { lhs, rhs in
+            if lhs.start != rhs.start {
+                return lhs.start < rhs.start
+            }
+            return lhs.end < rhs.end
+        }
+        todayPlan.availableWindows = availableWindows(todayPlan.availableWindows, including: visiblePlanBlocks)
+        appendSystemLog(
+            eventType: eventType(for: targetStatus),
+            blockId: targetBlockID,
+            payload: [
+                "offsetMinutes": "\(offsetMinutes)",
+                "affectedBlocks": "\(shiftedBlocks.count)"
+            ]
+        )
+        saveWorkspace()
+        lastErrorMessage = targetStatus == .delayed
+            ? "已将「\(shiftedBlocks.first(where: { $0.id == targetBlockID })?.title ?? "任务")」及后续任务整体顺延 \(delayStepMinutes) 分钟。"
+            : "已取消推迟，并将「\(shiftedBlocks.first(where: { $0.id == targetBlockID })?.title ?? "任务")」及后续任务整体回退 \(delayStepMinutes) 分钟。"
+    }
+
+    private func syncTaskTime(with block: TimeBlock) {
+        guard let taskId = block.taskId,
+              let taskIndex = tasks.firstIndex(where: { $0.id == taskId })
+        else { return }
+        tasks[taskIndex].fixedStart = block.start
+        tasks[taskIndex].estimatedDurationMinutes = block.durationMinutes
+        tasks[taskIndex].earliestStart = nil
+        tasks[taskIndex].latestEnd = nil
     }
 
     private func rebuildPlanKeepingCompletedBlocks(
@@ -1156,6 +1270,18 @@ final class AppModel: ObservableObject {
         return Self.mergedWindows(existingWindows + [extraWindow])
     }
 
+    private func availableWindows(_ existingWindows: [TimeWindow], including blocks: [TimeBlock]) -> [TimeWindow] {
+        let blockWindows = blocks.map { TimeWindow(start: $0.start, end: $0.end) }
+        guard let firstStart = blockWindows.map(\.start).min(),
+              let lastEnd = blockWindows.map(\.end).max()
+        else {
+            return existingWindows
+        }
+
+        let extraWindow = TimeWindow(start: firstStart, end: lastEnd)
+        return Self.mergedWindows(existingWindows + [extraWindow])
+    }
+
     private static func mergedWindows(_ windows: [TimeWindow]) -> [TimeWindow] {
         let sortedWindows = windows.sorted { $0.start < $1.start }
         guard var current = sortedWindows.first else { return [] }
@@ -1208,7 +1334,7 @@ final class AppModel: ObservableObject {
 
     private func firstConflict(for block: TimeBlock, excluding excludedID: TimeBlock.ID? = nil) -> TimeBlock? {
         todayPlan.blocks.first {
-            $0.id != excludedID && $0.overlaps(block)
+            $0.id != excludedID && $0.status != .deleted && $0.overlaps(block)
         }
     }
 
@@ -1234,7 +1360,7 @@ final class AppModel: ObservableObject {
     ) -> TimeWindow? {
         guard durationMinutes > 0 else { return nil }
         let busyBlocks = todayPlan.blocks
-            .filter { $0.id != excludedID }
+            .filter { $0.id != excludedID && $0.status != .deleted }
             .sorted { $0.start < $1.start }
 
         for window in todayPlan.availableWindows {
@@ -1305,7 +1431,7 @@ final class AppModel: ObservableObject {
                     self?.syncActiveBlockStatus()
                     self?.deliverRuntimeTaskNotifications()
                 }
-                try? await Swift.Task.sleep(for: .seconds(5))
+                try? await Swift.Task.sleep(for: .seconds(1))
             }
         }
     }
@@ -1463,6 +1589,8 @@ final class AppModel: ObservableObject {
             .delayed
         case .interrupted:
             .interrupted
+        case .deleted:
+            .replanned
         }
     }
 

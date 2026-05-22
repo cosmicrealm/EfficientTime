@@ -7,6 +7,7 @@ public enum TimeBlockStatus: String, Codable, CaseIterable, Sendable {
     case skipped
     case delayed
     case interrupted
+    case deleted
 }
 
 public struct TimeBlock: Identifiable, Codable, Hashable, Sendable {
@@ -48,4 +49,3 @@ public struct TimeBlock: Identifiable, Codable, Hashable, Sendable {
         start < other.end && other.start < end
     }
 }
-

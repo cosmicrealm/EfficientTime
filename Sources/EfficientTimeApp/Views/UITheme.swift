@@ -133,6 +133,7 @@ extension TimeBlockStatus {
         case .skipped: "已跳过"
         case .delayed: "已推迟"
         case .interrupted: "已中断"
+        case .deleted: "已删除"
         }
     }
 
@@ -141,9 +142,10 @@ extension TimeBlockStatus {
         case .planned: .blue
         case .active: .orange
         case .done: .green
-        case .skipped: .gray
+        case .skipped: Color(red: 0.04, green: 0.55, blue: 0.70)
         case .delayed: .purple
         case .interrupted: .red
+        case .deleted: .gray
         }
     }
 

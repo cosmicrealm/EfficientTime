@@ -4,12 +4,13 @@
 
 EfficientTime is a local-first macOS AI planning and productivity assistant for turning rough task notes into an executable daily schedule. It keeps the current task visible through the menu bar, a desktop floating panel, and system notifications, so you can focus on execution instead of repeatedly checking what comes next.
 
-Current version: `0.01`
+Current version: `0.02`
 
 ## What It Does
 
 - Turns daily work into time blocks.
 - Shows the current task, remaining time, and nearby tasks in an always-on desktop floating panel.
+- Provides a clickable 24-hour clock view for seeing which parts of the day are planned, completed, skipped, delayed, or still open.
 - Keeps the floating panel visible on the desktop while the app is running; it can be collapsed to reduce screen space.
 - Sends proactive reminders when tasks start and end.
 - Supports quick manual task entry with title, start time, and end time.
@@ -94,14 +95,14 @@ open dist/EfficientTime.app
 Create a `.dmg` and zip that can be uploaded to a GitHub Release:
 
 ```bash
-./scripts/package_release.sh 0.01
+./scripts/package_release.sh 0.02
 ```
 
 Output:
 
 ```text
-dist/EfficientTime-0.01.dmg
-dist/EfficientTime-0.01-macOS.zip
+dist/EfficientTime-0.02.dmg
+dist/EfficientTime-0.02-macOS.zip
 ```
 
 The `.dmg` is the recommended Release asset, while the zip can stay as a fallback. The current package is a local development build. It is not Developer ID signed or notarized yet.
@@ -131,4 +132,4 @@ Thanks to Codex for helping turn the original product idea into a working local 
 
 ## Release Status
 
-`0.01` is an early preview focused on local daily scheduling, real-time reminders, the floating execution panel, and AI draft planning. Code signing, notarization, and installer polish can be added in future releases.
+`0.02` is an early preview focused on local daily scheduling, real-time reminders, the floating execution panel, AI draft planning, and a richer execution/status overview for the day. Code signing, notarization, and installer polish can be added in future releases.

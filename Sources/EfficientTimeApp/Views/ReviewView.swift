@@ -38,7 +38,7 @@ struct ReviewView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            List(model.todayPlan.blocks) { block in
+            List(model.visiblePlanBlocks) { block in
                 HStack {
                     VStack(alignment: .leading, spacing: 3) {
                         Text(block.title)

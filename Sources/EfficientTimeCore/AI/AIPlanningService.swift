@@ -817,6 +817,7 @@ private struct ReviewBlock: Codable {
         case .skipped: "已跳过"
         case .delayed: "已推迟"
         case .interrupted: "已中断"
+        case .deleted: "已删除"
         }
     }
 }

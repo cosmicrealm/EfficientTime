@@ -42,10 +42,12 @@ final class FloatingPanelController {
 
     func setCompact(_ compact: Bool) {
         guard let panel else { return }
+        let currentFrame = panel.frame
+        let mouseAnchor = mouseAnchor(in: currentFrame)
         let size: NSSize
         if compact {
-            if panel.frame.width > compactSize.width || panel.frame.height > compactSize.height {
-                expandedSize = panel.frame.size
+            if currentFrame.width > compactSize.width || currentFrame.height > compactSize.height {
+                expandedSize = currentFrame.size
             }
             panel.styleMask.remove(.resizable)
             panel.minSize = compactSize
@@ -59,10 +61,58 @@ final class FloatingPanelController {
             panel.standardWindowButton(.zoomButton)?.isEnabled = false
             size = normalizedExpandedSize
         }
-        var frame = panel.frame
-        frame.origin.y += frame.height - size.height
-        frame.size = size
+        let frame = resizedFrame(
+            from: currentFrame,
+            to: size,
+            mouseAnchor: mouseAnchor,
+            screen: panel.screen
+        )
         panel.setFrame(frame, display: true, animate: true)
+    }
+
+    private func mouseAnchor(in frame: NSRect) -> NSPoint? {
+        let mouse = NSEvent.mouseLocation
+        guard frame.contains(mouse), frame.width > 0, frame.height > 0 else {
+            return nil
+        }
+        return NSPoint(
+            x: (mouse.x - frame.minX) / frame.width,
+            y: (mouse.y - frame.minY) / frame.height
+        )
+    }
+
+    private func resizedFrame(
+        from frame: NSRect,
+        to size: NSSize,
+        mouseAnchor: NSPoint?,
+        screen: NSScreen?
+    ) -> NSRect {
+        var nextFrame = frame
+        if let mouseAnchor {
+            let mouse = NSEvent.mouseLocation
+            nextFrame.origin = NSPoint(
+                x: mouse.x - size.width * mouseAnchor.x,
+                y: mouse.y - size.height * mouseAnchor.y
+            )
+        } else {
+            nextFrame.origin.y += frame.height - size.height
+        }
+        nextFrame.size = size
+        return clamped(nextFrame, to: screen?.visibleFrame)
+    }
+
+    private func clamped(_ frame: NSRect, to visibleFrame: NSRect?) -> NSRect {
+        guard let visibleFrame else { return frame }
+        var clampedFrame = frame
+        clampedFrame.origin.x = min(
+            max(clampedFrame.origin.x, visibleFrame.minX),
+            visibleFrame.maxX - clampedFrame.width
+        )
+        clampedFrame.origin.y = min(
+            max(clampedFrame.origin.y, visibleFrame.minY),
+            visibleFrame.maxY - clampedFrame.height
+        )
+        return clampedFrame
     }
 
     private var normalizedExpandedSize: NSSize {

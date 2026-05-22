@@ -13,12 +13,17 @@ struct FloatingPanelView: View {
             }
         }
         .background(
-            model.settings.floatingPanelBackground.opacity(model.settings.floatingPanelOpacity),
+            model.settings.floatingPanelBackground.opacity(panelSurfaceOpacity),
             in: RoundedRectangle(cornerRadius: model.isFloatingPanelCompact ? 18 : 16, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: model.isFloatingPanelCompact ? 18 : 16, style: .continuous)
-                .stroke(model.settings.floatingPanelBorderColor, lineWidth: 1)
+                .stroke(model.settings.floatingPanelBorderColor.opacity(panelSurfaceOpacity), lineWidth: 1)
+        }
+        .overlay(alignment: .topLeading) {
+            panelBeacon
+                .padding(6)
+                .allowsHitTesting(false)
         }
         .frame(
             width: model.isFloatingPanelCompact ? 306 : nil,
@@ -81,6 +86,22 @@ struct FloatingPanelView: View {
         .help("点击展开")
     }
 
+    private var panelBeacon: some View {
+        Circle()
+            .fill(Color(red: 1.0, green: 0.12, blue: 0.18))
+            .frame(width: model.isFloatingPanelCompact ? 10 : 11, height: model.isFloatingPanelCompact ? 10 : 11)
+            .overlay {
+                Circle()
+                    .stroke(Color.white.opacity(0.92), lineWidth: 1.4)
+            }
+            .shadow(color: Color.red.opacity(0.48), radius: 5, y: 1)
+            .accessibilityLabel("悬浮窗位置标识")
+    }
+
+    private var panelSurfaceOpacity: Double {
+        min(max(model.settings.floatingPanelOpacity, 0), 1)
+    }
+
     private var expandedContent: some View {
         VStack(alignment: .leading, spacing: 10) {
             panelTopBar
@@ -120,34 +141,39 @@ struct FloatingPanelView: View {
         .padding(10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(
-            model.settings.floatingPanelRowBackground.opacity(0.62),
+            model.settings.floatingPanelRowBackground.opacity(0.62 * panelSurfaceOpacity),
             in: RoundedRectangle(cornerRadius: 14, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(model.settings.floatingPanelBorderColor.opacity(0.65), lineWidth: 1)
+                .stroke(model.settings.floatingPanelBorderColor.opacity(0.65 * panelSurfaceOpacity), lineWidth: 1)
         }
     }
 
     private var panelTopBar: some View {
         HStack(spacing: 8) {
-            HStack(spacing: 7) {
-                Circle()
-                    .fill(countdownProgressColor)
-                    .frame(width: 8, height: 8)
-                Text("实时执行")
-                    .font(.system(size: 13, weight: .bold))
-                Text(currentClockText)
-                    .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                    .foregroundStyle(.secondary)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
+            Button {
                 model.toggleFloatingPanelSize()
+            } label: {
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(countdownProgressColor)
+                        .frame(width: 8, height: 8)
+                    Text("实时执行")
+                        .font(.system(size: 13, weight: .bold))
+                    Text(currentClockText)
+                        .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, minHeight: 28, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .help("点击折叠")
+            .buttonStyle(.plain)
+            .help("点击顶部空白区域折叠")
 
-            Spacer()
+            opacityControl
+                .frame(width: 174)
 
             Button {
                 model.toggleMainWindow()
@@ -169,6 +195,7 @@ struct FloatingPanelView: View {
             .foregroundStyle(.secondary)
             .help("折叠悬浮窗")
         }
+        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
     }
 
     private var liveFocusCard: some View {
@@ -209,10 +236,10 @@ struct FloatingPanelView: View {
         .background(
             LinearGradient(
                 colors: [
-                    countdownCoolColor.opacity(0.36),
-                    countdownMintColor.opacity(0.26),
-                    countdownWarmColor.opacity(0.16),
-                    model.settings.floatingPanelHeaderBackground.opacity(max(0.80, model.settings.floatingPanelOpacity))
+                    countdownCoolColor.opacity(0.36 * panelSurfaceOpacity),
+                    countdownMintColor.opacity(0.26 * panelSurfaceOpacity),
+                    countdownWarmColor.opacity(0.16 * panelSurfaceOpacity),
+                    model.settings.floatingPanelHeaderBackground.opacity(panelSurfaceOpacity)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -221,7 +248,7 @@ struct FloatingPanelView: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(countdownProgressColor.opacity(model.currentBlock == nil ? 0.35 : 0.66), lineWidth: 1.4)
+                .stroke(countdownProgressColor.opacity((model.currentBlock == nil ? 0.35 : 0.66) * panelSurfaceOpacity), lineWidth: 1.4)
         }
     }
 
@@ -252,7 +279,7 @@ struct FloatingPanelView: View {
             Button {
                 model.delayBlock(block.id)
             } label: {
-                Label(block.status == .delayed ? "取消推迟" : "推迟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
+                Label(block.status == .delayed ? "取消推迟" : "推迟 20 分钟", systemImage: block.status == .delayed ? "arrow.uturn.backward.circle" : "clock.badge.exclamationmark")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
@@ -287,7 +314,7 @@ struct FloatingPanelView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(TimeBlockStatus.active.softBackground, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .background(TimeBlockStatus.active.softBackground.opacity(panelSurfaceOpacity), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private var opacityControl: some View {
@@ -296,9 +323,13 @@ struct FloatingPanelView: View {
                 .foregroundStyle(.secondary)
                 .frame(width: 18)
 
+            Text("透明")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+
             Slider(
                 value: $model.settings.floatingPanelOpacity,
-                in: 0.45...1.0,
+                in: 0.0...1.0,
                 step: 0.05,
                 onEditingChanged: { isEditing in
                     if !isEditing {
@@ -378,19 +409,19 @@ struct FloatingPanelView: View {
                 .buttonStyle(.plain)
                 .foregroundStyle(block.status == .delayed ? model.settings.accentColor : .orange)
                 .disabled(block.status == .done)
-                .help(block.status == .delayed ? "取消推迟" : "推迟")
+                .help(block.status == .delayed ? "取消推迟并整体回退 20 分钟" : "整体顺延 20 分钟")
             }
             .font(.system(size: 15, weight: .semibold))
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 7)
         .background(
-            rowBackground(for: block, isCurrent: isCurrent),
+            rowBackground(for: block, isCurrent: isCurrent).opacity(panelSurfaceOpacity),
             in: RoundedRectangle(cornerRadius: 8, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(isSelected ? model.settings.accentColor.opacity(0.62) : rowBorder(for: block, isCurrent: isCurrent), lineWidth: isSelected ? 1.5 : 1)
+                .stroke((isSelected ? model.settings.accentColor.opacity(0.62) : rowBorder(for: block, isCurrent: isCurrent)).opacity(panelSurfaceOpacity), lineWidth: isSelected ? 1.5 : 1)
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -423,12 +454,12 @@ struct FloatingPanelView: View {
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
         .background(
-            rowBackground(for: block, isCurrent: isCurrent),
+            rowBackground(for: block, isCurrent: isCurrent).opacity(panelSurfaceOpacity),
             in: RoundedRectangle(cornerRadius: 10, style: .continuous)
         )
         .overlay {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(isSelected ? model.settings.accentColor.opacity(0.62) : rowBorder(for: block, isCurrent: isCurrent), lineWidth: isSelected ? 1.5 : 1)
+                .stroke((isSelected ? model.settings.accentColor.opacity(0.62) : rowBorder(for: block, isCurrent: isCurrent)).opacity(panelSurfaceOpacity), lineWidth: isSelected ? 1.5 : 1)
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -505,10 +536,10 @@ struct FloatingPanelView: View {
         .background(
             LinearGradient(
                 colors: [
-                    countdownCoolColor.opacity(0.34),
-                    countdownMintColor.opacity(0.24),
-                    countdownWarmColor.opacity(0.18),
-                    model.settings.floatingPanelHeaderBackground.opacity(max(0.78, model.settings.floatingPanelOpacity))
+                    countdownCoolColor.opacity(0.34 * panelSurfaceOpacity),
+                    countdownMintColor.opacity(0.24 * panelSurfaceOpacity),
+                    countdownWarmColor.opacity(0.18 * panelSurfaceOpacity),
+                    model.settings.floatingPanelHeaderBackground.opacity(panelSurfaceOpacity)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -517,7 +548,7 @@ struct FloatingPanelView: View {
         )
         .overlay {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(countdownProgressColor.opacity(model.currentBlock == nil ? 0.34 : 0.62), lineWidth: 1.4)
+                .stroke(countdownProgressColor.opacity((model.currentBlock == nil ? 0.34 : 0.62) * panelSurfaceOpacity), lineWidth: 1.4)
         }
         .contentShape(Rectangle())
         .onTapGesture {
@@ -854,7 +885,7 @@ struct FloatingPanelView: View {
     }
 
     private var timelineTargetDelayTitle: String {
-        model.timelineActionTargetBlock?.status == .delayed ? "取消推迟" : "推迟"
+        model.timelineActionTargetBlock?.status == .delayed ? "取消推迟" : "推迟 20 分钟"
     }
 
     private var timelineTargetDelayIcon: String {

@@ -23,7 +23,7 @@ struct ContentView: View {
                         .frame(minWidth: 520)
 
                     BlockDetailView()
-                        .frame(minWidth: 260, idealWidth: 300)
+                        .frame(minWidth: 390, idealWidth: 430)
                 }
                 .padding(.top, 6)
                 .tabItem {
@@ -47,9 +47,9 @@ struct ContentView: View {
             }
             .tint(model.settings.accentColor)
             .background(model.settings.pageBackground)
-            .frame(minWidth: 1120, minHeight: 680)
+            .frame(minWidth: 1280, minHeight: 680)
         }
-        .frame(minWidth: 1120, minHeight: 680)
+        .frame(minWidth: 1280, minHeight: 680)
     }
 }
 
